@@ -68,6 +68,6 @@ class AttendanceController extends Controller
         $user = auth()->user();
         $attendances = Attendance::where('user_id', $user->id)->orderBy('date', 'desc')->get();
 
-        return view('dashboard', compact('attendances'));
+        return view('attendance', compact('attendances'));
     }
 }

@@ -1,179 +1,137 @@
-<x-app-layout>
-    {{-- <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Dashboard') }}
-        </h2>
-    </x-slot> --}}
+@extends('admin.layouts.layout')
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
+@section('title', 'Mahabal Attendance')
+@section('admin')
+@section('pagetitle', 'Dashboard')
+    @section('page-css')
+        <link rel="stylesheet" href="{{ asset('admin/assets/css/index.css') }}">
+    @endsection
+    <div class="container mt-5">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Employee List</h4>
+                <div class="d-flex gap-2">
+                    <!-- Company Filter Dropdown -->
 
-                    @php
-                        $today = now()->toDateString();
-                        $todayAttendance = $attendances->where('date', $today)->first();
-                    @endphp
 
-                    @if(!$todayAttendance || !$todayAttendance->check_in_time)
-                        <button id="checkInBtn"
-                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Check In
-                        </button>
-                    @elseif(!$todayAttendance->check_out_time)
-                        <button id="checkOutBtn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                            Check Out
-                        </button>
-                    @else
-                        <p>You have already checked out for today.</p>
-                    @endif
-
-                    <!-- Camera Modal -->
-                    <div id="cameraModal"
-                        class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
-                        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                            <div class="mt-3 text-center">
-                                <h3 class="text-lg font-medium text-gray-900" id="modalTitle">Take Selfie</h3>
-                                <div class="mt-2 px-7 py-3">
-                                    <video id="video" width="100%" autoplay></video>
-                                    <canvas id="canvas" width="320" height="240" class="hidden"></canvas>
-                                    <br>
-                                    <button id="captureBtn"
-                                        class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                                        Capture
-                                    </button>
-                                    <button id="closeModal"
-                                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2">
-                                        Close
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h3 class="mt-6 text-lg font-medium">Attendance History</h3>
-                    <table class="min-w-full mt-4">
-                        <thead>
-                            <tr>
-                                <th
-                                    class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Date</th>
-                                <th
-                                    class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Check In</th>
-                                <th
-                                    class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Check Out</th>
-                                <th
-                                    class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Check In Selfie</th>
-                                <th
-                                    class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Check Out Selfie</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @foreach($attendances as $attendance)
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap">{{ $attendance->date }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        {{ $attendance->check_in_time ? $attendance->check_in_time->format('H:i') : '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        {{ $attendance->check_out_time ? $attendance->check_out_time->format('H:i') : '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        @if($attendance->check_in_selfie)
-                                            <img src="{{ asset('storage/' . $attendance->check_in_selfie) }}"
-                                                alt="Check In Selfie" class="w-16 h-16 object-cover">
-                                        @else
-                                            -
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        @if($attendance->check_out_selfie)
-                                            <img src="{{ asset('storage/' . $attendance->check_out_selfie) }}"
-                                                alt="Check Out Selfie" class="w-16 h-16 object-cover">
-                                        @else
-                                            -
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                        data-bs-target="#addWorkRecordModal">
+                        <i class="fas fa-plus"></i> Add Employee
+                    </button>
+                    <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#filterModal">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <a href="{{ route('dashboard') }}" class="btn btn-secondary">Reset</a>
                 </div>
+            </div>
+
+            <div class="card-body mt-3">
+                <!-- Custom search box -->
+                <div id="customSearchContainer" style="display:none;" class="search-bar-wrapper">
+                    <div class="search-bar-work-record">
+                        <i class="bi bi-search search-icon"></i>
+                        <input id="customSearchInput" type="text" class="search-input" placeholder="Search...">
+                        <i id="customSearchClear" class="bi bi-x clear-icon"></i>
+                    </div>
+                </div>
+
+                <table class="table table-bordered table-striped nowrap mb-0 employeeList" style="width:100%">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:30px"><input type="checkbox" id="selectAllEmployee"></th>
+                            <th>ID</th>
+                            <th>Date</th>
+                            <th>Employee Name</th>
+                            <th>Phone</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
             </div>
         </div>
     </div>
+<!-- Add Employee Modal -->
+<div class="modal fade" id="addWorkRecordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
 
-    <script>
-        let video = document.getElementById('video');
-        let canvas = document.getElementById('canvas');
-        let modal = document.getElementById('cameraModal');
-        let checkInBtn = document.getElementById('checkInBtn');
-        let checkOutBtn = document.getElementById('checkOutBtn');
-        let captureBtn = document.getElementById('captureBtn');
-        let closeModal = document.getElementById('closeModal');
-        let action = '';
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-plus"></i> Add Employee
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
 
-        if (checkInBtn) {
-            checkInBtn.addEventListener('click', () => {
-                action = 'check-in';
-                openCamera();
-            });
-        }
+            <form method="POST" action="{{ route('employees.store') }}">
+                @csrf
 
-        if (checkOutBtn) {
-            checkOutBtn.addEventListener('click', () => {
-                action = 'check-out';
-                openCamera();
-            });
-        }
+                <div class="modal-body">
 
-        closeModal.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-        });
+                    <!-- Name -->
+                    <div class="mb-3">
+                        <label class="form-label">Employee Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ old('name') }}">
+                        @error('name')
+                        <span class="text-danger">{{ $message }}</span>
+                        @enderror
+                    </div>
 
-        captureBtn.addEventListener('click', () => {
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(blob => {
-                let formData = new FormData();
-                formData.append('selfie', blob, 'selfie.jpg');
-                formData.append('_token', '{{ csrf_token() }}');
+                    <!-- Phone -->
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="text"
+                               name="phone"
+                               class="form-control"
+                               maxlength="10"
+                               inputmode="numeric" value="{{ old('phone') }}">
+                        @error('phone')
+                        <span class="text-danger">{{ $message }}</span>
+                        @enderror
+                    </div>
 
-                fetch('/' + action, {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        alert(data.message);
-                        location.reload();
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
-            });
-            modal.classList.add('hidden');
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-        });
+                    <!-- Password -->
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control">
+                        @error('password')
+                        <span class="text-danger">{{ $message }}</span>
+                        @enderror
+                    </div>
 
-        function openCamera() {
-            modal.classList.remove('hidden');
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    video.srcObject = stream;
-                    window.stream = stream;
-                })
-                .catch(err => {
-                    console.error('Error accessing camera:', err);
-                });
-        }
-    </script>
-</x-app-layout>
+                    <!-- Role -->
+                    <input type="hidden" name="role" value="user">
+
+                    <!-- Status -->
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="active" selected>Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                        @error('status')
+                        <span class="text-danger">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        Save Employee
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+@section('page-js')
+    <script src="{{ asset('admin/assets/js/user.js') }}"></script>
+@endsection
+@endsection

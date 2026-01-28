@@ -1,0 +1,170 @@
+:root{
+      --accent: #38d39f;
+      --accent-dark: #32be8f;
+      --bg: #f8fafb;
+      --input-border: #d9d9d9;
+      --muted: #6c757d;
+      --card-radius: 1rem;
+      --container-gutter: 2rem;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    html,body{
+      height: 100%;
+      background: var(--bg);
+    }
+
+    /* full-screen container */
+    .login-page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4rem;
+      align-items: center;
+      padding: 3rem var(--container-gutter);
+    }
+
+    /* smaller screens: single column */
+    @media (max-width: 992px) {
+      .login-page {
+        grid-template-columns: 1fr;
+        padding: 2rem 1rem;
+        gap: 2rem;
+      }
+    }
+
+    /* decorative wave image (fixed) */
+    .wave {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+      user-select: none;
+      opacity: .95;
+    }
+    @media (max-width: 900px) { .wave { display:none; } }
+
+    .illustration {
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    .illustration img {
+      max-width: 520px;
+      width: 100%;
+      height: auto;
+    }
+    @media (max-width: 992px) {
+      .illustration { display:none; } /* hide illustration on narrow screens */
+    }
+
+    /* the card containing the form */
+    .login-card {
+      max-width: 420px;
+      width: 100%;
+      margin-left: 0;
+      background: #fff;
+      border-radius: var(--card-radius);
+      box-shadow: 0 8px 30px rgba(16,24,40,0.08);
+      padding: 2.2rem;
+    }
+
+    .brand-avatar {
+      height: 92px;
+      width: 92px;
+      object-fit: contain;
+      margin: 0 auto 0.75rem;
+      display: block;
+    }
+
+    .login-title {
+      font-size: 2.1rem;
+      font-weight: 600;
+      letter-spacing: .02em;
+      margin-bottom: .8rem;
+      text-transform: uppercase;
+      color: #222;
+      text-align: center;
+    }
+
+    /* Input block (custom animated floating label) */
+    .floating {
+      position: relative;
+      margin: 1.1rem 0;
+      border-bottom: 2px solid var(--input-border);
+      padding-bottom: .35rem;
+      transition: border-color .25s ease;
+    }
+    .floating .fa-icon {
+      width: 36px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-right: .4rem;
+    }
+    .floating input {
+      border: none;
+      outline: none;
+      background: transparent;
+      padding: .25rem 0;
+      font-size: 1.05rem;
+      color: #333;
+      width: calc(100% - 36px);
+    }
+
+    .floating label {
+      position: absolute;
+      left: 44px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #999;
+      font-size: 1rem;
+      pointer-events: none;
+      transition: all .22s ease;
+    }
+
+    .floating.focused {
+      border-color: var(--accent);
+    }
+    .floating.focused .fa-icon { color: var(--accent); }
+    .floating.focused label {
+      top: -10px;
+      left: 36px;
+      font-size: .82rem;
+      color: var(--accent);
+    }
+
+    /* submit button gradient (bootstrap button override) */
+    .btn-accent {
+      background-image: linear-gradient(to right, var(--accent-dark), var(--accent));
+      background-size: 200%;
+      color: #fff;
+      border: none;
+      height: 48px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      font-weight: 600;
+      transition: background-position .4s ease;
+    }
+    .btn-accent:hover { background-position: right; }
+
+    /* forgot link alignment */
+    .forgot-link {
+      font-size: .9rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .forgot-link:hover { color: var(--accent); }
+
+    /* small helper text */
+    .small-muted { color: #888; font-size: .9rem; }
+
+    /* responsive centering on mobile */
+    @media (max-width: 576px) {
+      .login-card { padding: 1.6rem; }
+      .login-title { font-size: 1.7rem; }
+    }

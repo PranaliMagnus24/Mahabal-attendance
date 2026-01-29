@@ -9,12 +9,6 @@
     <nav class="header-nav ms-auto">
         <ul class="d-flex align-items-center">
             <!-----For open work record form modal-->
-            <li class="nav-item">
-                <button class="nav-link me-5 nav-icon" data-bs-toggle="modal" data-bs-target="#addWorkRecordModal">
-                    <i class="bi bi-plus-circle"></i>
-                </button>
-            </li>
-
             <li class="nav-item dropdown">
 
                 <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">

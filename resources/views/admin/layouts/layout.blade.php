@@ -163,10 +163,6 @@
 
     @yield('page-js')
 
-
-
-
-
 </body>
 
 </html>

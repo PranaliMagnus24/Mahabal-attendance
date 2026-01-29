@@ -2,7 +2,14 @@
 
 @section('title', 'Mahabal Attendance')
 @section('admin')
-@section('pagetitle', 'Dashboard')
+@section('pagetitle', 'User Management')
+
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
     @section('page-css')
         <link rel="stylesheet" href="{{ asset('admin/assets/css/index.css') }}">
     @endsection
@@ -52,86 +59,154 @@
             </div>
         </div>
     </div>
-<!-- Add Employee Modal -->
-<div class="modal fade" id="addWorkRecordModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="bi bi-person-plus"></i> Add Employee
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <form method="POST" action="{{ route('employees.store') }}">
-                @csrf
-
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i> Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
-
-                    <!-- Name -->
-                    <div class="mb-3">
-                        <label class="form-label">Employee Name</label>
-                        <input type="text" name="name" class="form-control" value="{{ old('name') }}">
-                        @error('name')
-                        <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    <!-- Phone -->
-                    <div class="mb-3">
-                        <label class="form-label">Phone Number</label>
-                        <input type="text"
-                               name="phone"
-                               class="form-control"
-                               maxlength="10"
-                               inputmode="numeric" value="{{ old('phone') }}">
-                        @error('phone')
-                        <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    <!-- Password -->
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control">
-                        @error('password')
-                        <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    <!-- Role -->
-                    <input type="hidden" name="role" value="user">
-
-                    <!-- Status -->
-                    <div class="mb-3">
-                        <label class="form-label">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="active" selected>Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                        @error('status')
-                        <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
+                    Are you sure you want to delete this employee? This action cannot be undone.
                 </div>
-
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-success">
-                        Save Employee
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
                 </div>
-
-            </form>
-
+            </div>
         </div>
     </div>
-</div>
-@section('page-js')
-    <script src="{{ asset('admin/assets/js/user.js') }}"></script>
-@endsection
+
+    <!-- Add Employee Modal -->
+    <div class="modal fade" id="addWorkRecordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus"></i> Add Employee
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form method="POST" action="{{ route('employees.store') }}">
+                    @csrf
+
+                    <div class="modal-body">
+
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <label class="form-label">Employee Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ old('name') }}">
+                            @error('name')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="text" name="phone" class="form-control" maxlength="10" inputmode="numeric"
+                                value="{{ old('phone') }}">
+                            @error('phone')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control">
+                            @error('password')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <!-- Role -->
+                        <input type="hidden" name="role" value="user">
+
+                        <!-- Status -->
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="active" selected>Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                            @error('status')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            Save Employee
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Employee Modal -->
+    <div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil"></i> Edit Employee
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form id="editEmployeeForm" method="POST">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="modal-body">
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <label class="form-label">Employee Name</label>
+                            <input type="text" name="name" id="editName" class="form-control">
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="text" name="phone" id="editPhone" class="form-control" maxlength="10"
+                                inputmode="numeric">
+                        </div>
+
+                        <!-- Status -->
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" id="editStatus" class="form-select">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Employee</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @section('page-js')
+        <script src="{{ asset('admin/assets/js/user.js') }}"></script>
+    @endsection
 @endsection

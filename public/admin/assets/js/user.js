@@ -3,6 +3,7 @@ $(document).ready(function () {
     let table = $('.employeeList').DataTable({
         processing: true,
         serverSide: true,
+        responsive: true,
         ajax: {
             url: "/dashboard",
             data: function (d) {

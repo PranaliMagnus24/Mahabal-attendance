@@ -28,8 +28,8 @@
                         <i id="customSearchClear" class="bi bi-x clear-icon"></i>
                     </div>
                 </div>
-
-                <table class="table table-bordered table-striped nowrap mb-0" style="width:100%" id="attendanceTable">
+                <div class="table-responsive">
+                <table class="table table-bordered nowrap w-100" id="attendanceTable">
                     <thead class="table-light">
                         <tr>
                             <th style="width:30px"><input type="checkbox" id="selectAllEmployee"></th>
@@ -43,6 +43,7 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                </div>
 
             </div>
         </div>
@@ -96,6 +97,7 @@
                 let table = $('#attendanceTable').DataTable({
                     processing: true,
                     serverSide: true,
+                    responsive: true,
                     ajax: {
                         url: "{{ route('attendance.list') }}",
                         data: function (d) {

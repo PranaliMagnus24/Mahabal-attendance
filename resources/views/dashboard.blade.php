@@ -41,8 +41,8 @@
                         <i id="customSearchClear" class="bi bi-x clear-icon"></i>
                     </div>
                 </div>
-
-                <table class="table table-bordered table-striped nowrap mb-0 employeeList" style="width:100%">
+                <div class="table-responsive">
+                <table class="employeeList table table-bordered nowrap w-100">
                     <thead class="table-light">
                         <tr>
                             <th style="width:30px"><input type="checkbox" id="selectAllEmployee"></th>
@@ -55,6 +55,7 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                </div>
 
             </div>
         </div>

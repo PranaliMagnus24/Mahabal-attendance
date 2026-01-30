@@ -16,14 +16,17 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::put('dashboard/update/{id}', [DashboardController::class, 'update'])->name('employees.update');
     Route::delete('dashboard/destroy/{id}', [DashboardController::class, 'destroy'])->name('employees.destroy');
     Route::get('/attendance/list', [AttendanceController::class, 'list'])->name('attendance.list');
+
 });
 
 Route::middleware(['auth', 'role:user'])->group(function () {
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.checkIn');
     Route::post('/check-out', [AttendanceController::class, 'checkOut'])->name('attendance.checkOut');
-    Route::get('/attendance/show/{id}', [AttendanceController::class, 'show'])->name('attendance.show');
+
 });
+///this page is show both admin and user
+Route::get('/attendance/show/{id}', [AttendanceController::class, 'show'])->name('attendance.show');
 Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

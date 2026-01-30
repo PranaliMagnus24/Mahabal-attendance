@@ -162,6 +162,14 @@
     <script src="{{ asset('admin/assets/js/main.js') }}"></script>
 
     @yield('page-js')
+    <script>
+window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+</script>
+
 
 </body>
 

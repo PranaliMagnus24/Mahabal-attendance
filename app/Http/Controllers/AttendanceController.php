@@ -52,19 +52,8 @@ class AttendanceController extends Controller
                     ->timezone('Asia/Kolkata')
                     ->format('d-m-Y')
                 )
-                ->addColumn('selfie', function ($row) {
-                    $selfieHtml = '';
-                    if ($row->check_in_selfie) {
-                        $selfieHtml .= '<img src="'.asset('storage/'.$row->check_in_selfie).'" alt="Check In Selfie" class="img-thumbnail" style="width: 50px; height: 50px; margin-right: 5px;">';
-                    }
-                    if ($row->check_out_selfie) {
-                        $selfieHtml .= '<img src="'.asset('storage/'.$row->check_out_selfie).'" alt="Check Out Selfie" class="img-thumbnail" style="width: 50px; height: 50px;">';
-                    }
-
-                    return $selfieHtml ?: 'No Selfie';
-                })
                 ->addColumn('action', function ($row) {
-                    return '<button class="btn btn-primary btn-sm show-details" data-id="'.$row->id.'">Show</button>';
+                    return '<a href="'.route('attendance.show', $row->id).'" class="btn btn-primary btn-sm">View</a>';
                 })
                 ->rawColumns(['checkbox', 'selfie', 'action'])
                 ->make(true);
@@ -76,28 +65,28 @@ class AttendanceController extends Controller
     public function checkIn(Request $request)
     {
         $request->validate([
-            'selfie' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'selfie' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $user = auth()->user();
         $today = now()->toDateString();
 
-        $attendance = Attendance::where('user_id', $user->id)->where('date', $today)->first();
-
-        if (! $attendance) {
-            $attendance = new Attendance;
-            $attendance->user_id = $user->id;
-            $attendance->date = $today;
-        }
+        $attendance = Attendance::firstOrCreate(
+            ['user_id' => $user->id, 'date' => $today]
+        );
 
         if ($attendance->check_in_time) {
             return response()->json(['message' => 'Already checked in today.'], 400);
         }
 
-        $path = $request->file('selfie')->store('attendances', 'public');
-        $attendance->check_in_time = now();
-        $attendance->check_in_selfie = $path;
-        $attendance->save();
+        $file = $request->file('selfie');
+        $filename = time().'_'.$user->id.'_checkin.jpg';
+        $file->move(public_path('upload/selfies'), $filename);
+
+        $attendance->update([
+            'check_in_time' => now(),
+            'check_in_selfie' => 'upload/selfies/'.$filename,
+        ]);
 
         return response()->json(['message' => 'Checked in successfully.']);
     }
@@ -105,13 +94,15 @@ class AttendanceController extends Controller
     public function checkOut(Request $request)
     {
         $request->validate([
-            'selfie' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'selfie' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $user = auth()->user();
         $today = now()->toDateString();
 
-        $attendance = Attendance::where('user_id', $user->id)->where('date', $today)->first();
+        $attendance = Attendance::where('user_id', $user->id)
+            ->where('date', $today)
+            ->first();
 
         if (! $attendance || ! $attendance->check_in_time) {
             return response()->json(['message' => 'You need to check in first.'], 400);
@@ -121,10 +112,14 @@ class AttendanceController extends Controller
             return response()->json(['message' => 'Already checked out today.'], 400);
         }
 
-        $path = $request->file('selfie')->store('attendances', 'public');
-        $attendance->check_out_time = now();
-        $attendance->check_out_selfie = $path;
-        $attendance->save();
+        $file = $request->file('selfie');
+        $filename = time().'_'.$user->id.'_checkout.jpg';
+        $file->move(public_path('upload/selfies'), $filename);
+
+        $attendance->update([
+            'check_out_time' => now(),
+            'check_out_selfie' => 'upload/selfies/'.$filename,
+        ]);
 
         return response()->json(['message' => 'Checked out successfully.']);
     }
@@ -140,7 +135,7 @@ class AttendanceController extends Controller
     public function show($id)
     {
         $attendance = Attendance::with('user')->findOrFail($id);
+        return view('show-attendance', compact('attendance'));
 
-        return response()->json($attendance);
     }
 }

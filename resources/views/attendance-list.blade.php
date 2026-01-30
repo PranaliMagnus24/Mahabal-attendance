@@ -38,7 +38,6 @@
                             <th>User Name</th>
                             <th>Check In</th>
                             <th>Check Out</th>
-                            <th>Selfie</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -110,7 +109,6 @@
                         { data: 'user_name' },
                         { data: 'check_in' },
                         { data: 'check_out' },
-                        { data: 'selfie', orderable: false, searchable: false },
                         { data: 'action', orderable: false, searchable: false }
                     ]
                 });

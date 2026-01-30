@@ -10916,7 +10916,7 @@
 			 * parameter - if it is not given, the value of `zeroRecords` will be used
 			 * instead (either the default or given value).
 			 */
-			"sEmptyTable": "डेटा उपलब्ध नाही",
+			"sEmptyTable": "Data Not Found",
 
 
 			/**

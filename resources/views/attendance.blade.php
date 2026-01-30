@@ -49,8 +49,7 @@
                                 <th>Date</th>
                                 <th>Check In</th>
                                 <th>Check Out</th>
-                                <th>Check In Selfie</th>
-                                <th>Check Out Selfie</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -73,23 +72,8 @@
                                     ->format('h:i A')
                                 : '-' }}
                                                     </td>
-
                                                     <td>
-                                                        @if($attendance->check_in_selfie)
-                                                            <img src="{{ asset('storage/' . $attendance->check_in_selfie) }}" class="img-thumbnail"
-                                                                width="70">
-                                                        @else
-                                                            -
-                                                        @endif
-                                                    </td>
-
-                                                    <td>
-                                                        @if($attendance->check_out_selfie)
-                                                            <img src="{{ asset('storage/' . $attendance->check_out_selfie) }}" class="img-thumbnail"
-                                                                width="70">
-                                                        @else
-                                                            -
-                                                        @endif
+                                                        <a href="{{ route('attendance.show', $attendance->id) }}" class="btn btn-primary">View</a>
                                                     </td>
                                                 </tr>
                             @empty
@@ -136,105 +120,141 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function () {
 
-            const checkInBtn = document.getElementById('checkInBtn');
-            const checkOutBtn = document.getElementById('checkOutBtn');
-            const captureBtn = document.getElementById('captureBtn');
+    const checkInBtn  = document.getElementById('checkInBtn');
+    const checkOutBtn = document.getElementById('checkOutBtn');
+    const captureBtn  = document.getElementById('captureBtn');
 
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
+    const video  = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx    = canvas.getContext('2d');
 
-            const modalElement = document.getElementById('cameraModal');
-            const cameraModal = new bootstrap.Modal(modalElement);
+    const modalElement = document.getElementById('cameraModal');
+    const cameraModal = new bootstrap.Modal(modalElement);
 
-            let action = '';
+    let action = '';
+    let stream = null;
 
-            // ===============================
-            // OPEN MODAL
-            // ===============================
-            if (checkInBtn) {
-                checkInBtn.addEventListener('click', function () {
-                    action = 'check-in';
-                    openCamera();
-                });
-            }
+    /* --------------------------
+       OPEN CAMERA
+    ---------------------------*/
+    function openCamera() {
+        cameraModal.show();
 
-            if (checkOutBtn) {
-                checkOutBtn.addEventListener('click', function () {
-                    action = 'check-out';
-                    openCamera();
-                });
-            }
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(s => {
+                stream = s;
+                video.srcObject = stream;
+            })
+            .catch(() => alert('Camera access denied'));
+    }
 
-            function openCamera() {
-                cameraModal.show();
-
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(stream => {
-                        video.srcObject = stream;
-                        window.stream = stream;
-                    })
-                    .catch(err => {
-                        alert('Camera access denied');
-                        console.error(err);
-                    });
-            }
-
-            // ===============================
-            // CAPTURE IMAGE
-            // ===============================
-            captureBtn.addEventListener('click', function () {
-
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                canvas.toBlob(blob => {
-
-                    const formData = new FormData();
-                    formData.append('selfie', blob, 'selfie.jpg');
-                    formData.append('_token', '{{ csrf_token() }}');
-
-                    fetch('/' + action, {
-                        method: 'POST',
-                        body: formData
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            cameraModal.hide();
-                            stopCamera();
-
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success',
-                                text: data.message,
-                                timer: 1500,
-                                showConfirmButton: false
-                            }).then(() => location.reload());
-                        })
-                        .catch(err => {
-                            stopCamera();
-                            console.error(err); 
-                        });
-
-                }, 'image/jpeg');
-            });
-
-            // ===============================
-            // STOP CAMERA ON MODAL CLOSE
-            // ===============================
-            modalElement.addEventListener('hidden.bs.modal', function () {
-                stopCamera();
-            });
-
-            function stopCamera() {
-                if (window.stream) {
-                    window.stream.getTracks().forEach(track => track.stop());
-                    window.stream = null;
-                }
-            }
-
+    if (checkInBtn) {
+        checkInBtn.addEventListener('click', () => {
+            action = 'check-in';
+            openCamera();
         });
-    </script>
+    }
+
+    if (checkOutBtn) {
+        checkOutBtn.addEventListener('click', () => {
+            action = 'check-out';
+            openCamera();
+        });
+    }
+
+    /* --------------------------
+       CAPTURE SELFIE + ADDRESS
+    ---------------------------*/
+    captureBtn.addEventListener('click', async function () {
+
+        if (!navigator.geolocation) {
+            alert('Geolocation not supported');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async position => {
+
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            // 🔹 Reverse Geocoding (OpenStreetMap)
+            let address = 'Location not found';
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+                );
+                const data = await response.json();
+                address = data.display_name || address;
+            } catch (e) {}
+
+            // Draw selfie
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Background for text
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "14px Arial";
+
+            const now = new Date();
+            const dateTime = now.toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata'
+            });
+
+            ctx.fillText(`Date & Time: ${dateTime}`, 10, canvas.height - 55);
+            ctx.fillText(`Location:`, 10, canvas.height - 35);
+            ctx.fillText(address, 10, canvas.height - 15);
+
+            // Convert to image
+            canvas.toBlob(blob => {
+
+                const formData = new FormData();
+                formData.append('selfie', blob, 'selfie.jpg');
+                formData.append('_token', '{{ csrf_token() }}');
+
+                fetch('/' + action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    cameraModal.hide();
+                    stopCamera();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: data.message,
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => location.reload());
+                });
+
+            }, 'image/jpeg');
+
+        }, () => {
+            alert('Location access denied');
+        });
+    });
+
+    /* --------------------------
+       STOP CAMERA
+    ---------------------------*/
+    modalElement.addEventListener('hidden.bs.modal', stopCamera);
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+    }
+
+});
+</script>
+
+
 
 @endsection

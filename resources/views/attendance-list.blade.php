@@ -12,24 +12,24 @@
                 <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Attendance List</h4>
                 <div class="d-flex gap-2 align-items-center">
 
-    <!-- Date Filter -->
-    <input type="date" id="filterDate" class="form-control">
+                    <!-- Date Filter -->
+                    <input type="date" id="filterDate" class="form-control">
 
-    <!-- User Filter -->
-    <select id="filterUser" class="form-select">
-        <option value="">Select User</option>
-        @foreach ($users as $user)
-            <option value="{{ $user->id }}">{{ $user->name }}</option>
-        @endforeach
-    </select>
-    {{-- <button id="exportExcel" class="btn btn-success">
-    <i class="bi bi-file-earmark-excel"></i> Export Excel
-</button> --}}
+                    <!-- User Filter -->
+                    <select id="filterUser" class="form-select">
+                        <option value="">Select User</option>
+                        @foreach ($users as $user)
+                            <option value="{{ $user->id }}">{{ $user->name }}</option>
+                        @endforeach
+                    </select>
+                    {{-- <button id="exportExcel" class="btn btn-success">
+                        <i class="bi bi-file-earmark-excel"></i> Export Excel
+                    </button> --}}
 
 
-    <!-- Reset -->
-    <a href="{{ route('attendance.list') }}" class="btn btn-secondary">Reset</a>
-</div>
+                    <!-- Reset -->
+                    <a href="{{ route('attendance.list') }}" class="btn btn-secondary">Reset</a>
+                </div>
 
             </div>
 
@@ -43,20 +43,19 @@
                     </div>
                 </div>
                 <div class="table-responsive">
-                <table class="table table-bordered nowrap w-100" id="attendanceTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width:30px"><input type="checkbox" id="selectAllEmployee"></th>
-                            <th>ID</th>
-                            <th>Date</th>
-                            <th>User Name</th>
-                            <th>Check In</th>
-                            <th>Check Out</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                    <table class="table table-bordered nowrap w-100" id="attendanceTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:30px"><input type="checkbox" id="selectAllEmployee"></th>
+                                <th>Date</th>
+                                <th>User Name</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
 
             </div>
@@ -120,7 +119,6 @@
                     },
                     columns: [
                         { data: 'checkbox', orderable: false, searchable: false },
-                        { data: 'DT_RowIndex', orderable: false, searchable: false },
                         { data: 'date' },
                         { data: 'user_name' },
                         { data: 'check_in' },
@@ -130,8 +128,8 @@
                 });
 
                 $('#filterDate, #filterUser').on('change', function () {
-        table.draw();
-    });
+                    table.draw();
+                });
 
                 // Handle show details button click
                 $(document).on('click', '.show-details', function () {
@@ -146,8 +144,8 @@
                             $('#attendanceDate').text(data.date);
                             $('#checkInTime').text(data.check_in_time ? new Date(data.check_in_time).toLocaleString() : 'N/A');
                             $('#checkOutTime').text(data.check_out_time ? new Date(data.check_out_time).toLocaleString() : 'N/A');
-                            $('#checkInSelfie').attr('src', data.check_in_selfie ? '/storage/' + data.check_in_selfie : '');
-                            $('#checkOutSelfie').attr('src', data.check_out_selfie ? '/storage/' + data.check_out_selfie : '');
+                            $('#checkInSelfie').attr('src', data.check_in_selfie ? '/' + data.check_in_selfie : '');
+                            $('#checkOutSelfie').attr('src', data.check_out_selfie ? '/' + data.check_out_selfie : '');
                             $('#attendanceDetailsModal').modal('show');
                         },
                         error: function () {

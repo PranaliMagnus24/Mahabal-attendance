@@ -25,9 +25,6 @@
                             <i class="fas fa-plus"></i> Add Employee
                         </button>
                     @endif
-                    <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#filterModal">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
                     <a href="{{ route('dashboard') }}" class="btn btn-secondary">Reset</a>
                 </div>
             </div>
@@ -220,7 +217,11 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button id="captureBtn" class="btn btn-success">Capture</button>
+                    <button id="captureBtn" class="btn btn-success">
+                        <span id="captureBtnText">Capture</span>
+                        <span id="captureBtnLoader" class="spinner-border spinner-border-sm ms-2 d-none" role="status"
+                            aria-hidden="true"></span>
+                    </button>
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
 
@@ -270,8 +271,16 @@
                 });
 
             document.getElementById('captureBtn').onclick = function () {
+                const captureBtn = this;
+                const captureBtnText = document.getElementById('captureBtnText');
+                const captureBtnLoader = document.getElementById('captureBtnLoader');
 
-                if (!stream) return;
+                if (!stream || captureBtn.disabled) return;
+
+                // Show loader and disable button
+                captureBtn.disabled = true;
+                captureBtnText.textContent = 'Processing...';
+                captureBtnLoader.classList.remove('d-none');
 
                 navigator.geolocation.getCurrentPosition(async position => {
 
@@ -311,6 +320,12 @@
                             formData.append('user_id', userId);
                         }
 
+                        // Log FormData contents for debugging
+                        console.log('FormData contents:');
+                        for (let [key, value] of formData.entries()) {
+                            console.log(key, value);
+                        }
+
                         const url = action === 'check-in'
                             ? "{{ route('attendance.checkIn') }}"
                             : "{{ route('attendance.checkOut') }}";
@@ -330,9 +345,18 @@
                                 console.log('RESPONSE:', text);
 
                                 if (!response.ok) {
-                                    throw new Error(text);
+                                    try {
+                                        const errorData = JSON.parse(text);
+                                        throw new Error(errorData.message || 'Attendance failed');
+                                    } catch (e) {
+                                        throw new Error(text || 'Attendance failed');
+                                    }
                                 }
-                                return JSON.parse(text);
+                                try {
+                                    return JSON.parse(text);
+                                } catch (e) {
+                                    throw new Error('Invalid response format');
+                                }
                             })
                             .then(data => {
                                 modal.hide();
@@ -358,6 +382,12 @@
                                     timer: 2000,
                                     showConfirmButton: false
                                 });
+                            })
+                            .finally(() => {
+                                // Hide loader and re-enable button
+                                captureBtn.disabled = false;
+                                captureBtnText.textContent = 'Capture';
+                                captureBtnLoader.classList.add('d-none');
                             });
 
                     }, 'image/jpeg');
@@ -373,6 +403,11 @@
                         timer: 2000,
                         showConfirmButton: false
                     });
+
+                    // Hide loader and re-enable button
+                    captureBtn.disabled = false;
+                    captureBtnText.textContent = 'Capture';
+                    captureBtnLoader.classList.add('d-none');
                 });
             };
         });

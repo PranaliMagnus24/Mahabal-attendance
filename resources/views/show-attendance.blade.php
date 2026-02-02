@@ -24,7 +24,7 @@
                             <div class="card-body mt-3">
                                 <p><strong>Name:</strong> {{ $attendance->user->name }}</p>
                                 @if($attendance && $attendance->user)
-                                <p><strong>Email:</strong> {{ $attendance->user->email }}</p>
+                                    <p><strong>Email:</strong> {{ $attendance->user->email }}</p>
                                 @endif
                                 <p><strong>Phone:</strong> {{ $attendance->user->phone }}</p>
                             </div>
@@ -41,13 +41,16 @@
                                 </p>
                                 <p><strong>Check In Time:</strong>
                                     {{ $attendance->check_in_time ? \Carbon\Carbon::parse($attendance->check_in_time)->timezone('Asia/Kolkata')->format('j M Y h:i A') : '-'
-                                    }}
+                                        }}
                                 </p>
                                 <p><strong>Check Out Time:</strong>
                                     {{ $attendance->check_out_time
-                                    ? \Carbon\Carbon::parse($attendance->check_out_time)->timezone('Asia/Kolkata')->format('j M Y h:i A')
-                                    : '-'
-                                    }}
+        ? \Carbon\Carbon::parse($attendance->check_out_time)->timezone('Asia/Kolkata')->format('j M Y h:i A')
+        : '-'
+                                        }}
+                                </p>
+                                <p><strong>Attended By:</strong>
+                                    {{ $attendance->attendedBy ? $attendance->attendedBy->name : '-' }}
                                 </p>
                             </div>
                         </div>

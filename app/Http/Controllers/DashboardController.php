@@ -11,6 +11,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        $authRole = auth()->user()->role;
         if ($request->ajax()) {
 
             $query = User::where('role', 'user');
@@ -26,19 +27,50 @@ class DashboardController extends Controller
             }
 
             return DataTables::of($query)
-                ->addIndexColumn()
                 ->addColumn('checkbox', function ($row) {
                     return '<input type="checkbox" value="'.$row->id.'">';
                 })
-                ->addColumn('date', function ($row) {
-                    return $row->created_at->format('d-m-Y');
+                ->addColumn('action', function ($row) use ($authRole) {
+
+                    // ADMIN → Edit + Delete
+                    if ($authRole === 'admin') {
+                        return '
+            <button class="btn btn-sm btn-primary edit-btn" data-id="'.$row->id.'">Edit</button>
+            <button class="btn btn-sm btn-danger delete-btn" data-id="'.$row->id.'">Delete</button>
+        ';
+                    }
+
+                    // MANAGER → Check In/Out button based on attendance status
+                    if ($authRole === 'manager') {
+                        $today = now()->toDateString();
+                        $attendance = \App\Models\Attendance::where('user_id', $row->id)
+                            ->where('date', $today)
+                            ->first();
+
+                        if (! $attendance || ! $attendance->check_in_time) {
+                            return '
+                <button class="btn btn-sm btn-success attendance-btn"
+                    data-user="'.$row->id.'"
+                    data-action="check-in">
+                    Check In
+                </button>
+            ';
+                        } elseif ($attendance->check_in_time && ! $attendance->check_out_time) {
+                            return '
+                <button class="btn btn-sm btn-warning attendance-btn"
+                    data-user="'.$row->id.'"
+                    data-action="check-out">
+                    Check Out
+                </button>
+            ';
+                        } else {
+                            return '<span class="text-success">Completed</span>';
+                        }
+                    }
+
+                    return '-';
                 })
-                ->addColumn('action', function ($row) {
-                    return '
-                        <button class="btn btn-sm btn-primary edit-btn" data-id="'.$row->id.'" data-bs-toggle="modal" data-bs-target="#editEmployeeModal">Edit</button>
-                        <button class="btn btn-sm btn-danger delete-btn" data-id="'.$row->id.'">Delete</button>
-                    ';
-                })
+
                 ->rawColumns(['checkbox', 'action'])
                 ->make(true);
         }

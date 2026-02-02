@@ -4,27 +4,27 @@
 @section('admin')
 @section('pagetitle', 'User Management')
 
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-@endif
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
     @section('page-css')
         <link rel="stylesheet" href="{{ asset('admin/assets/css/index.css') }}">
     @endsection
+
     <div class="container mt-5">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Employee List</h4>
                 <div class="d-flex gap-2">
-                    <!-- Company Filter Dropdown -->
-
-
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
-                        data-bs-target="#addWorkRecordModal">
-                        <i class="fas fa-plus"></i> Add Employee
-                    </button>
+                    @if(auth()->check() && auth()->user()->role === 'admin')
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#addWorkRecordModal">
+                            <i class="fas fa-plus"></i> Add Employee
+                        </button>
+                    @endif
                     <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#filterModal">
                         <i class="fas fa-filter"></i> Filter
                     </button>
@@ -42,19 +42,17 @@
                     </div>
                 </div>
                 <div class="table-responsive">
-                <table class="employeeList table table-bordered nowrap w-100">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width:30px"><input type="checkbox" id="selectAllEmployee"></th>
-                            <th>ID</th>
-                            <th>Date</th>
-                            <th>Employee Name</th>
-                            <th>Phone</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                    <table class="employeeList table table-bordered nowrap w-100">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:30px"><input type="checkbox" id="selectAllEmployee"></th>
+                                <th>Employee Name</th>
+                                <th>Phone</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
 
             </div>
@@ -207,7 +205,178 @@
         </div>
     </div>
 
+    <div class="modal fade" id="cameraModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Take Selfie</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body text-center">
+                    <video id="video" width="100%" autoplay></video>
+                    <canvas id="canvas" width="320" height="240" class="d-none"></canvas>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="captureBtn" class="btn btn-success">Capture</button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     @section('page-js')
         <script src="{{ asset('admin/assets/js/user.js') }}"></script>
     @endsection
+    <script>
+        document.addEventListener('click', function (e) {
+
+            let target = e.target;
+            while (target && !target.classList.contains('attendance-btn')) {
+                target = target.parentElement;
+            }
+            if (!target) return;
+
+            const userId = target.dataset.user || null;
+            const action = target.dataset.action;
+
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const modalEl = document.getElementById('cameraModal');
+            const modal = new bootstrap.Modal(modalEl);
+
+            let stream = null;
+
+            modal.show();
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(s => {
+                    stream = s;
+                    video.srcObject = stream;
+                })
+                .catch(() => {
+                    modal.hide();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Camera Required',
+                        text: 'Camera access is required for attendance',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                });
+
+            document.getElementById('captureBtn').onclick = function () {
+
+                if (!stream) return;
+
+                navigator.geolocation.getCurrentPosition(async position => {
+
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    let address = 'Location not found';
+                    try {
+                        const res = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+                        );
+                        const data = await res.json();
+                        address = data.display_name || address;
+                    } catch { }
+
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    ctx.fillStyle = "rgba(0,0,0,0.6)";
+                    ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
+
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "14px Arial";
+
+                    const now = new Date().toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata'
+                    });
+
+                    ctx.fillText(`Date & Time: ${now}`, 10, canvas.height - 55);
+                    ctx.fillText(`Location: ${address}`, 10, canvas.height - 25);
+
+                    canvas.toBlob(blob => {
+
+                        const formData = new FormData();
+                        formData.append('selfie', blob, 'selfie.jpg');
+
+                        if (userId) {
+                            formData.append('user_id', userId);
+                        }
+
+                        const url = action === 'check-in'
+                            ? "{{ route('attendance.checkIn') }}"
+                            : "{{ route('attendance.checkOut') }}";
+
+                        fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document
+                                    .querySelector('meta[name="csrf-token"]')
+                                    .getAttribute('content')
+                            },
+                            body: formData
+                        })
+                            .then(async response => {
+                                const text = await response.text();
+                                console.log('STATUS:', response.status);
+                                console.log('RESPONSE:', text);
+
+                                if (!response.ok) {
+                                    throw new Error(text);
+                                }
+                                return JSON.parse(text);
+                            })
+                            .then(data => {
+                                modal.hide();
+                                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => location.reload());
+                            })
+                            .catch(err => {
+                                console.error('ERROR:', err.message);
+                                modal.hide();
+                                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Attendance failed. Check console.',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                            });
+
+                    }, 'image/jpeg');
+
+                }, () => {
+                    modal.hide();
+                    if (stream) stream.getTracks().forEach(t => t.stop());
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Location Required',
+                        text: 'Geolocation is required for attendance',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                });
+            };
+        });
+    </script>
+
+
 @endsection

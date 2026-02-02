@@ -2,7 +2,7 @@
 
     <ul class="sidebar-nav" id="sidebar-nav">
 
-        @if(auth()->check() && auth()->user()->role === 'admin')
+        @if(auth()->check() && auth()->user()->role === 'admin' || auth()->user()->role === 'manager')
             <li class="nav-item">
                 <a class="nav-link" href="{{ route('dashboard') }}">
                     <i class="bi bi-person"></i>

@@ -13,8 +13,6 @@ $(document).ready(function () {
         },
         columns: [
             { data: 'checkbox', orderable: false, searchable: false },
-            { data: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'date', name: 'date' },
             { data: 'name', name: 'name' },
             { data: 'phone', name: 'phone' },
             { data: 'action', orderable: false, searchable: false }

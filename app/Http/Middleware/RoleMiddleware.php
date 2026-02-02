@@ -4,21 +4,27 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
-   public function handle(Request $request, Closure $next, $role)
+    public function handle(Request $request, Closure $next, ...$roles)
     {
         if (! auth()->check()) {
             return redirect()->route('login');
         }
 
-        if (auth()->user()->role !== $role) {
+        $userRole = auth()->user()->role;
 
-            return auth()->user()->role === 'admin'
-                ? redirect()->route('dashboard')
-                : redirect()->route('attendance.index');
+        // Check if user has any of the allowed roles
+        if (! in_array($userRole, $roles)) {
+
+            // Admin OR Manager → dashboard
+            if (in_array($userRole, ['admin', 'manager'])) {
+                return redirect()->route('dashboard');
+            }
+
+            // Normal user
+            return redirect()->route('attendance.index');
         }
 
         return $next($request);

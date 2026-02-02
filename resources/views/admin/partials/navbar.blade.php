@@ -8,6 +8,35 @@
 
     <nav class="header-nav ms-auto">
         <ul class="d-flex align-items-center">
+            <!-- Manager's Own Attendance Buttons -->
+            @if(auth()->check() && auth()->user()->role === 'manager')
+                @php
+                    $today = now()->toDateString();
+                    $managerAttendance = \App\Models\Attendance::where('user_id', auth()->id())
+                        ->where('date', $today)
+                        ->first();
+                @endphp
+
+                @if(!$managerAttendance || !$managerAttendance->check_in_time)
+                    <li class="nav-item">
+                        <button class="btn btn-success btn-sm attendance-btn" data-user="{{ auth()->id() }}"
+                            data-action="check-in">
+                            <i class="bi bi-box-arrow-in-right"></i> Check In
+                        </button>
+                    </li>
+                @elseif($managerAttendance->check_in_time && !$managerAttendance->check_out_time)
+                    <li class="nav-item">
+                        <button class="btn btn-warning btn-sm attendance-btn" data-user="{{ auth()->id() }}"
+                            data-action="check-out">
+                            <i class="bi bi-box-arrow-right"></i> Check Out
+                        </button>
+                    </li>
+                @else
+                    <li class="nav-item">
+                        <span class="text-success fw-bold">Attendance Completed</span>
+                    </li>
+                @endif
+            @endif
             <!-----For open work record form modal-->
             <li class="nav-item dropdown">
 

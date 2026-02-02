@@ -6,122 +6,177 @@ use App\Models\Attendance;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
+use App\Models\User;
 
 class AttendanceController extends Controller
 {
     public function list(Request $request)
-    {
-        if ($request->ajax()) {
+{
+    if ($request->ajax()) {
 
-            $query = Attendance::with('user')->latest('date');
+        $query = Attendance::with('user')
+            ->latest('date');
 
-            // Search by user name
-            if ($request->search_value) {
-                $query->whereHas('user', function ($q) use ($request) {
-                    $q->where('name', 'like', '%'.$request->search_value.'%');
-                });
-            }
+        // ✅ Filter by USER
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
 
-            // Date filter
-            if ($request->date) {
-                $query->whereDate('date', $request->date);
-            }
+        // ✅ Filter by DATE
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
 
-            return DataTables::of($query)
-                ->addIndexColumn()
-                ->addColumn('checkbox', function ($row) {
-                    return '<input type="checkbox" value="'.$row->id.'">';
-                })
-                ->addColumn('id', fn ($row) => $row->id)
-                ->addColumn('user_name', fn ($row) => $row->user->name)
-                ->addColumn('check_in', function ($row) {
-                    return $row->check_in_time
-                        ? Carbon::parse($row->check_in_time)
-                            ->timezone('Asia/Kolkata')
-                            ->format('h:i A')
-                        : '-';
-                })
-                ->addColumn('check_out', function ($row) {
-                    return $row->check_out_time
-                        ? Carbon::parse($row->check_out_time)
-                            ->timezone('Asia/Kolkata')
-                            ->format('h:i A')
-                        : '-';
-                })
-                ->addColumn('date', fn ($row) => Carbon::parse($row->date)
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('checkbox', fn ($row) =>
+                '<input type="checkbox" value="'.$row->id.'">'
+            )
+            ->addColumn('user_name', fn ($row) => $row->user->name)
+            ->addColumn('check_in', fn ($row) =>
+                $row->check_in_time
+                    ? Carbon::parse($row->check_in_time)
+                        ->timezone('Asia/Kolkata')
+                        ->format('h:i A')
+                    : '-'
+            )
+            ->addColumn('check_out', fn ($row) =>
+                $row->check_out_time
+                    ? Carbon::parse($row->check_out_time)
+                        ->timezone('Asia/Kolkata')
+                        ->format('h:i A')
+                    : '-'
+            )
+            ->addColumn('date', fn ($row) =>
+                Carbon::parse($row->date)
                     ->timezone('Asia/Kolkata')
                     ->format('d-m-Y')
-                )
-                ->addColumn('action', function ($row) {
-                    return '<a href="'.route('attendance.show', $row->id).'" class="btn btn-primary btn-sm">View</a>';
-                })
-                ->rawColumns(['checkbox', 'selfie', 'action'])
-                ->make(true);
-        }
-
-        return view('attendance-list');
+            )
+            ->addColumn('action', fn ($row) =>
+                '<button class="btn btn-primary btn-sm show-details" data-id="'.$row->id.'">View</button>'
+            )
+            ->rawColumns(['checkbox', 'action'])
+            ->make(true);
     }
 
-    public function checkIn(Request $request)
-    {
+    // 👇 Users for dropdown (role = user)
+    $users = User::where('role', 'user')->select('id','name')->get();
+
+    return view('attendance-list', compact('users'));
+}
+
+
+   public function checkIn(Request $request)
+{
+    try {
         $request->validate([
             'selfie' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'user_id' => 'nullable|exists:users,id'
         ]);
 
-        $user = auth()->user();
-        $today = now()->toDateString();
+        // Logged-in user
+        $authUser = auth()->user();
 
-        $attendance = Attendance::firstOrCreate(
-            ['user_id' => $user->id, 'date' => $today]
-        );
+        // Determine target user
+        $userId = $request->user_id ?? $authUser->id;
 
-        if ($attendance->check_in_time) {
-            return response()->json(['message' => 'Already checked in today.'], 400);
+        // Manager authorization
+        if ($request->user_id && $authUser->role !== 'manager') {
+            return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        $file = $request->file('selfie');
-        $filename = time().'_'.$user->id.'_checkin.jpg';
-        $file->move(public_path('upload/selfies'), $filename);
-
-        $attendance->update([
-            'check_in_time' => now(),
-            'check_in_selfie' => 'upload/selfies/'.$filename,
-        ]);
-
-        return response()->json(['message' => 'Checked in successfully.']);
-    }
-
-    public function checkOut(Request $request)
-    {
-        $request->validate([
-            'selfie' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
-
-        $user = auth()->user();
         $today = now()->toDateString();
 
-        $attendance = Attendance::where('user_id', $user->id)
+        // Get today's attendance
+        $attendance = Attendance::where('user_id', $userId)
             ->where('date', $today)
             ->first();
 
-        if (! $attendance || ! $attendance->check_in_time) {
-            return response()->json(['message' => 'You need to check in first.'], 400);
+        // If already checked in
+        if ($attendance && $attendance->check_in_time) {
+            return response()->json(['message' => 'Already checked in today.'], 400);
         }
 
-        if ($attendance->check_out_time) {
-            return response()->json(['message' => 'Already checked out today.'], 400);
+        // If record does not exist → create
+        if (! $attendance) {
+            $attendance = Attendance::create([
+                'user_id'     => $userId,
+                'date'        => $today,
+                'attended_by' => $authUser->id,
+            ]);
         }
 
-        $file = $request->file('selfie');
-        $filename = time().'_'.$user->id.'_checkout.jpg';
-        $file->move(public_path('upload/selfies'), $filename);
+        $updateData = [
+            'check_in_time' => now(),
+            'attended_by'   => $authUser->id,
+        ];
 
-        $attendance->update([
-            'check_out_time' => now(),
-            'check_out_selfie' => 'upload/selfies/'.$filename,
-        ]);
+        if ($request->hasFile('selfie')) {
+            $filename = time().'_'.$userId.'_checkin.jpg';
+            $request->file('selfie')->move(public_path('upload/selfies'), $filename);
+            $updateData['check_in_selfie'] = 'upload/selfies/'.$filename;
+        }
 
-        return response()->json(['message' => 'Checked out successfully.']);
+        $attendance->update($updateData);
+
+        return response()->json(['message' => 'Checked in successfully.']);
+
+    } catch (\Exception $e) {
+        \Log::error('CheckIn error: '.$e->getMessage());
+        return response()->json(['message' => 'Something went wrong'], 500);
+    }
+}
+
+    public function checkOut(Request $request)
+    {
+        try {
+            $request->validate([
+                'selfie' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            ]);
+
+            // Determine which user to check out
+            $userId = $request->user_id ? $request->user_id : auth()->id();
+
+            // If manager is trying to check out another user, verify role
+            if ($request->user_id && auth()->user()->role !== 'manager') {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+
+            $today = now()->toDateString();
+
+            $attendance = Attendance::where('user_id', $userId)
+                ->where('date', $today)
+                ->first();
+
+            if (! $attendance || ! $attendance->check_in_time) {
+                return response()->json(['message' => 'You need to check in first.'], 400);
+            }
+
+            if ($attendance->check_out_time) {
+                return response()->json(['message' => 'Already checked out today.'], 400);
+            }
+
+            $updateData = [
+                'check_out_time' => now(),
+                'attended_by' => auth()->id(),
+            ];
+
+            if ($request->hasFile('selfie')) {
+                $file = $request->file('selfie');
+                $filename = time().'_'.$userId.'_checkout.jpg';
+                $file->move(public_path('upload/selfies'), $filename);
+                $updateData['check_out_selfie'] = 'upload/selfies/'.$filename;
+            }
+
+            $attendance->update($updateData);
+
+            return response()->json(['message' => 'Checked out successfully.']);
+        } catch (\Exception $e) {
+            \Log::error('CheckOut error: '.$e->getMessage());
+            \Log::error($e->getTraceAsString());
+
+            return response()->json(['message' => 'Error: '.$e->getMessage()], 500);
+        }
     }
 
     public function index()
@@ -134,7 +189,8 @@ class AttendanceController extends Controller
 
     public function show($id)
     {
-        $attendance = Attendance::with('user')->findOrFail($id);
+        $attendance = Attendance::with('user', 'attendedBy')->findOrFail($id);
+
         return view('show-attendance', compact('attendance'));
 
     }

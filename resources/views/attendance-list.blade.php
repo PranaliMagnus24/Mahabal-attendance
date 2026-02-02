@@ -10,13 +10,27 @@
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Attendance List</h4>
-                <div class="d-flex gap-2">
-                    <!-- Company Filter Dropdown -->
-                    <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#filterModal">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
-                    <a href="{{ route('attendance.list') }}" class="btn btn-secondary">Reset</a>
-                </div>
+                <div class="d-flex gap-2 align-items-center">
+
+    <!-- Date Filter -->
+    <input type="date" id="filterDate" class="form-control">
+
+    <!-- User Filter -->
+    <select id="filterUser" class="form-select">
+        <option value="">Select User</option>
+        @foreach ($users as $user)
+            <option value="{{ $user->id }}">{{ $user->name }}</option>
+        @endforeach
+    </select>
+    {{-- <button id="exportExcel" class="btn btn-success">
+    <i class="bi bi-file-earmark-excel"></i> Export Excel
+</button> --}}
+
+
+    <!-- Reset -->
+    <a href="{{ route('attendance.list') }}" class="btn btn-secondary">Reset</a>
+</div>
+
             </div>
 
             <div class="card-body mt-3">
@@ -115,9 +129,9 @@
                     ]
                 });
 
-                $('#filterDate').change(function () {
-                    table.draw();
-                });
+                $('#filterDate, #filterUser').on('change', function () {
+        table.draw();
+    });
 
                 // Handle show details button click
                 $(document).on('click', '.show-details', function () {

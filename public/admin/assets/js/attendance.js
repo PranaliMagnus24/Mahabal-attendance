@@ -1,12 +1,26 @@
 $(function () {
 
+    // Date range validation
+    $('#startDate').on('change', function () {
+        const startDate = $(this).val();
+        $('#endDate').attr('min', startDate);
+
+        // If end date is before start date, clear it
+        const endDate = $('#endDate').val();
+        if (endDate && endDate < startDate) {
+            $('#endDate').val('');
+        }
+    });
+
     let table = $('#attendanceTable').DataTable({
         processing: true,
         serverSide: true,
         ajax: {
             url: "{{ route('attendance.list') }}",
             data: function (d) {
-                d.date = $('#filterDate').val();
+                d.start_date = $('#startDate').val();
+                d.end_date = $('#endDate').val();
+                d.user_id = $('#filterUser').val();
             }
         },
         columns: [
@@ -20,7 +34,7 @@ $(function () {
         ]
     });
 
-    $('#filterDate').change(function () {
+    $('#startDate, #endDate, #filterUser').change(function () {
         table.draw();
     });
 

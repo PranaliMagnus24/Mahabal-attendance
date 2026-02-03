@@ -17,14 +17,18 @@ class AttendanceController extends Controller
             $query = Attendance::with('user')
                 ->latest('date');
 
-            // ✅ Filter by USER
+            // Filter by USER
             if ($request->filled('user_id')) {
                 $query->where('user_id', $request->user_id);
             }
 
-            // ✅ Filter by DATE
-            if ($request->filled('date')) {
-                $query->whereDate('date', $request->date);
+            // Filter by DATE RANGE
+            if ($request->filled('start_date') && $request->filled('end_date')) {
+                $query->whereBetween('date', [$request->start_date, $request->end_date]);
+            } elseif ($request->filled('start_date')) {
+                $query->whereDate('date', '>=', $request->start_date);
+            } elseif ($request->filled('end_date')) {
+                $query->whereDate('date', '<=', $request->end_date);
             }
 
             return DataTables::of($query)
@@ -53,7 +57,7 @@ class AttendanceController extends Controller
                 ->make(true);
         }
 
-        // 👇 Users for dropdown (role = user)
+        // Users for dropdown (role = user)
         $users = User::where('role', 'user')->select('id', 'name')->get();
 
         return view('attendance-list', compact('users'));
@@ -85,15 +89,18 @@ class AttendanceController extends Controller
             // Get today's attendance
             $attendance = Attendance::where('user_id', $userId)
                 ->where('date', $today)
+                ->latest('id')
                 ->first();
 
-            // If already checked in
-            if ($attendance && $attendance->check_in_time) {
-                return response()->json(['message' => 'Already checked in today.'], 400);
-            }
-
-            // If record does not exist → create
-            if (! $attendance) {
+            // If already completed check-in and check-out, allow new check-in for next day (create new record)
+            if ($attendance && $attendance->check_in_time && $attendance->check_out_time) {
+                $attendance = Attendance::create([
+                    'user_id' => $userId,
+                    'date' => $today,
+                    'attended_by' => $authUser->id,
+                ]);
+            } elseif (! $attendance) {
+                // If record does not exist → create
                 $attendance = Attendance::create([
                     'user_id' => $userId,
                     'date' => $today,
@@ -149,6 +156,9 @@ class AttendanceController extends Controller
 
             $attendance = Attendance::where('user_id', $userId)
                 ->where('date', $today)
+                ->whereNotNull('check_in_time')
+                ->whereNull('check_out_time')
+                ->latest('check_in_time')
                 ->first();
 
             if (! $attendance || ! $attendance->check_in_time) {

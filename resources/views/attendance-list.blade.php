@@ -10,25 +10,38 @@
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Attendance List</h4>
-                <div class="d-flex gap-2 align-items-center">
-
-                    <!-- Date Filter -->
-                    <input type="date" id="filterDate" class="form-control">
-
+                <div class="d-flex gap-3 align-items-end flex-wrap">
+                    <!-- Start Date -->
+                    <div class="d-flex flex-column">
+                        <input type="date" id="startDate" class="form-control">
+                        <label for="startDate" class="form-text text-muted text-center">
+                            Start Date
+                        </label>
+                    </div>
+                    <!-- End Date -->
+                    <div class="d-flex flex-column">
+                        <input type="date" id="endDate" class="form-control">
+                        <label for="endDate" class="form-text text-muted text-center">
+                            End Date
+                        </label>
+                    </div>
                     <!-- User Filter -->
-                    <select id="filterUser" class="form-select">
-                        <option value="">Select User</option>
-                        @foreach ($users as $user)
-                            <option value="{{ $user->id }}">{{ $user->name }}</option>
-                        @endforeach
-                    </select>
-                    {{-- <button id="exportExcel" class="btn btn-success">
-                        <i class="bi bi-file-earmark-excel"></i> Export Excel
-                    </button> --}}
-
-
+                    <div class="d-flex flex-column">
+                        <select id="filterUser" class="form-select">
+                            <option value="">Select User</option>
+                            @foreach ($users as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+                        <label class="form-text text-muted text-center">
+                            User
+                        </label>
+                    </div>
                     <!-- Reset -->
-                    <a href="{{ route('attendance.list') }}" class="btn btn-secondary">Reset</a>
+                    <div class="mb-4">
+                        <a href="{{ route('attendance.list') }}" class="btn btn-secondary">Reset</a>
+                    </div>
+
                 </div>
 
             </div>
@@ -107,6 +120,18 @@
     @section('page-js')
         <script>
             $(function () {
+                // Date range validation
+                $('#startDate').on('change', function () {
+                    const startDate = $(this).val();
+                    $('#endDate').attr('min', startDate);
+
+                    // If end date is before start date, clear it
+                    const endDate = $('#endDate').val();
+                    if (endDate && endDate < startDate) {
+                        $('#endDate').val('');
+                    }
+                });
+
                 let table = $('#attendanceTable').DataTable({
                     processing: true,
                     serverSide: true,
@@ -114,7 +139,9 @@
                     ajax: {
                         url: "{{ route('attendance.list') }}",
                         data: function (d) {
-                            d.date = $('#filterDate').val();
+                            d.start_date = $('#startDate').val();
+                            d.end_date = $('#endDate').val();
+                            d.user_id = $('#filterUser').val();
                         }
                     },
                     columns: [
@@ -127,7 +154,7 @@
                     ]
                 });
 
-                $('#filterDate, #filterUser').on('change', function () {
+                $('#startDate, #endDate, #filterUser').on('change', function () {
                     table.draw();
                 });
 

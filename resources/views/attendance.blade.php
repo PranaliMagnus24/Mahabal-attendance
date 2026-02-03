@@ -21,7 +21,7 @@
 
                 @php
                     $today = now()->toDateString();
-                    $todayAttendance = $attendances->where('date', $today)->first();
+                    $todayAttendance = $attendances->where('date', $today)->sortByDesc('id')->first();
                 @endphp
 
                 {{-- Check In / Check Out Buttons --}}
@@ -35,7 +35,10 @@
                             <i class="bi bi-box-arrow-right"></i> Check Out
                         </button>
                     @else
-                        <span class="badge bg-success">You have completed today’s attendance</span>
+                        {{-- If check out is completed, show check in button again for next day --}}
+                        <button id="checkInBtn" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-in-right"></i> Check In
+                        </button>
                     @endif
                 </div>
 
@@ -73,7 +76,8 @@
                                 : '-' }}
                                                     </td>
                                                     <td>
-                                                        <a href="{{ route('attendance.show', $attendance->id) }}" class="btn btn-primary">View</a>
+                                                        <a href="{{ route('attendance.show', $attendance->id) }}"
+                                                            class="btn btn-primary">View</a>
                                                     </td>
                                                 </tr>
                             @empty
@@ -120,140 +124,140 @@
     </div>
 
     <script>
-document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function () {
 
-    const checkInBtn  = document.getElementById('checkInBtn');
-    const checkOutBtn = document.getElementById('checkOutBtn');
-    const captureBtn  = document.getElementById('captureBtn');
+            const checkInBtn = document.getElementById('checkInBtn');
+            const checkOutBtn = document.getElementById('checkOutBtn');
+            const captureBtn = document.getElementById('captureBtn');
 
-    const video  = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx    = canvas.getContext('2d');
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
 
-    const modalElement = document.getElementById('cameraModal');
-    const cameraModal = new bootstrap.Modal(modalElement);
+            const modalElement = document.getElementById('cameraModal');
+            const cameraModal = new bootstrap.Modal(modalElement);
 
-    let action = '';
-    let stream = null;
+            let action = '';
+            let stream = null;
 
-    /* --------------------------
-       OPEN CAMERA
-    ---------------------------*/
-    function openCamera() {
-        cameraModal.show();
+            /* --------------------------
+               OPEN CAMERA
+            ---------------------------*/
+            function openCamera() {
+                cameraModal.show();
 
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(s => {
-                stream = s;
-                video.srcObject = stream;
-            })
-            .catch(() => alert('Camera access denied'));
-    }
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(s => {
+                        stream = s;
+                        video.srcObject = stream;
+                    })
+                    .catch(() => alert('Camera access denied'));
+            }
 
-    if (checkInBtn) {
-        checkInBtn.addEventListener('click', () => {
-            action = 'check-in';
-            openCamera();
-        });
-    }
+            if (checkInBtn) {
+                checkInBtn.addEventListener('click', () => {
+                    action = 'check-in';
+                    openCamera();
+                });
+            }
 
-    if (checkOutBtn) {
-        checkOutBtn.addEventListener('click', () => {
-            action = 'check-out';
-            openCamera();
-        });
-    }
+            if (checkOutBtn) {
+                checkOutBtn.addEventListener('click', () => {
+                    action = 'check-out';
+                    openCamera();
+                });
+            }
 
-    /* --------------------------
-       CAPTURE SELFIE + ADDRESS
-    ---------------------------*/
-    captureBtn.addEventListener('click', async function () {
+            /* --------------------------
+               CAPTURE SELFIE + ADDRESS
+            ---------------------------*/
+            captureBtn.addEventListener('click', async function () {
 
-        if (!navigator.geolocation) {
-            alert('Geolocation not supported');
-            return;
-        }
+                if (!navigator.geolocation) {
+                    alert('Geolocation not supported');
+                    return;
+                }
 
-        navigator.geolocation.getCurrentPosition(async position => {
+                navigator.geolocation.getCurrentPosition(async position => {
 
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
 
-            // 🔹 Reverse Geocoding (OpenStreetMap)
-            let address = 'Location not found';
-            try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-                );
-                const data = await response.json();
-                address = data.display_name || address;
-            } catch (e) {}
+                    // 🔹 Reverse Geocoding (OpenStreetMap)
+                    let address = 'Location not found';
+                    try {
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+                        );
+                        const data = await response.json();
+                        address = data.display_name || address;
+                    } catch (e) { }
 
-            // Draw selfie
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    // Draw selfie
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Background for text
-            ctx.fillStyle = "rgba(0,0,0,0.6)";
-            ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
+                    // Background for text
+                    ctx.fillStyle = "rgba(0,0,0,0.6)";
+                    ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
 
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "14px Arial";
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = "14px Arial";
 
-            const now = new Date();
-            const dateTime = now.toLocaleString('en-IN', {
-                timeZone: 'Asia/Kolkata'
+                    const now = new Date();
+                    const dateTime = now.toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata'
+                    });
+
+                    ctx.fillText(`Date & Time: ${dateTime}`, 10, canvas.height - 55);
+                    ctx.fillText(`Location:`, 10, canvas.height - 35);
+                    ctx.fillText(address, 10, canvas.height - 15);
+
+                    // Convert to image
+                    canvas.toBlob(blob => {
+
+                        const formData = new FormData();
+                        formData.append('selfie', blob, 'selfie.jpg');
+                        formData.append('_token', '{{ csrf_token() }}');
+
+                        fetch('/' + action, {
+                            method: 'POST',
+                            body: formData
+                        })
+                            .then(res => res.json())
+                            .then(data => {
+                                cameraModal.hide();
+                                stopCamera();
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => location.reload());
+                            });
+
+                    }, 'image/jpeg');
+
+                }, () => {
+                    alert('Location access denied');
+                });
             });
 
-            ctx.fillText(`Date & Time: ${dateTime}`, 10, canvas.height - 55);
-            ctx.fillText(`Location:`, 10, canvas.height - 35);
-            ctx.fillText(address, 10, canvas.height - 15);
+            /* --------------------------
+               STOP CAMERA
+            ---------------------------*/
+            modalElement.addEventListener('hidden.bs.modal', stopCamera);
 
-            // Convert to image
-            canvas.toBlob(blob => {
+            function stopCamera() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+            }
 
-                const formData = new FormData();
-                formData.append('selfie', blob, 'selfie.jpg');
-                formData.append('_token', '{{ csrf_token() }}');
-
-                fetch('/' + action, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(res => res.json())
-                .then(data => {
-                    cameraModal.hide();
-                    stopCamera();
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: data.message,
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => location.reload());
-                });
-
-            }, 'image/jpeg');
-
-        }, () => {
-            alert('Location access denied');
         });
-    });
-
-    /* --------------------------
-       STOP CAMERA
-    ---------------------------*/
-    modalElement.addEventListener('hidden.bs.modal', stopCamera);
-
-    function stopCamera() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-    }
-
-});
-</script>
+    </script>
 
 
 

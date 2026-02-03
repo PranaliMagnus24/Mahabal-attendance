@@ -39,12 +39,15 @@
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="employeeList table table-bordered nowrap w-100">
+                    <table class="employeeList table table-bordered nowrap w-100"  data-role="{{ auth()->user()->role }}">
                         <thead class="table-light">
                             <tr>
                                 <th style="width:30px"><input type="checkbox" id="selectAllEmployee"></th>
                                 <th>Employee Name</th>
                                 <th>Phone</th>
+                                @if(auth()->user()->role === 'admin')
+                                <th>Role</th>
+                                @endif
                                 <th>Action</th>
                             </tr>
                         </thead>

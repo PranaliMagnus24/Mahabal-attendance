@@ -1,9 +1,27 @@
 $(document).ready(function () {
+    const currentRole = $('.employeeList').data('role');
+    const isAdmin = currentRole === 'admin';
 
-    let table = $('.employeeList').DataTable({
+    if ($.fn.DataTable.isDataTable('.employeeList')) {
+        $('.employeeList').DataTable().destroy();
+    }
+
+    let columns = [
+        { data: 'checkbox', orderable: false, searchable: false },
+        { data: 'name' },
+        { data: 'phone' }
+    ];
+    if (isAdmin) {
+        columns.push({ data: 'role' });
+    }
+
+    columns.push({ data: 'action', orderable: false, searchable: false });
+
+    $('.employeeList').DataTable({
         processing: true,
         serverSide: true,
         responsive: true,
+        autoWidth: false,
         ajax: {
             url: "/dashboard",
             data: function (d) {
@@ -11,14 +29,8 @@ $(document).ready(function () {
                 d.status = $('#statusFilter').val();
             }
         },
-        columns: [
-            { data: 'checkbox', orderable: false, searchable: false },
-            { data: 'name', name: 'name' },
-            { data: 'phone', name: 'phone' },
-            { data: 'action', orderable: false, searchable: false }
-        ]
+        columns: columns
     });
-
     // Search
     $('#customSearchInput').keyup(function () {
         table.draw();

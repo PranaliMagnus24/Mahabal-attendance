@@ -11,13 +11,52 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Employee List</h4>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#filterModal">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
                     <a href="{{ route('dashboard') }}" class="btn btn-secondary">Reset</a>
                 </div>
             </div>
             <div class="card-body mt-3">
+
+                <!-- Attendance Details Modal -->
+                <div class="modal fade" id="attendanceDetailsModal" tabindex="-1"
+                    aria-labelledby="attendanceDetailsModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="attendanceDetailsModalLabel">Attendance Details</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>User Information</h6>
+                                        <p><strong>Name:</strong> <span id="userName"></span></p>
+                                        <p><strong>Email:</strong> <span id="userEmail"></span></p>
+                                        <p><strong>Phone:</strong> <span id="userPhone"></span></p>
+                                        <p><strong>Date:</strong> <span id="attendanceDate"></span></p>
+                                        <p><strong>Check In Time:</strong> <span id="checkInTime"></span></p>
+                                        <p><strong>Check Out Time:</strong> <span id="checkOutTime"></span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Selfies</h6>
+                                        <div class="mb-3">
+                                            <strong>Check In Selfie:</strong><br>
+                                            <img id="checkInSelfie" src="" alt="Check In Selfie" class="img-fluid"
+                                                style="max-width: 200px;">
+                                        </div>
+                                        <div>
+                                            <strong>Check Out Selfie:</strong><br>
+                                            <img id="checkOutSelfie" src="" alt="Check Out Selfie" class="img-fluid"
+                                                style="max-width: 200px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 @php
                     $today = now()->toDateString();
@@ -76,8 +115,8 @@
                                 : '-' }}
                                                     </td>
                                                     <td>
-                                                        <a href="{{ route('attendance.show', $attendance->id) }}"
-                                                            class="btn btn-primary">View</a>
+                                                        <button class="btn btn-primary btn-sm show-details"
+                                                            data-id="{{ $attendance->id }}">View</button>
                                                     </td>
                                                 </tr>
                             @empty
@@ -172,6 +211,10 @@
                CAPTURE SELFIE + ADDRESS
             ---------------------------*/
             captureBtn.addEventListener('click', async function () {
+                // Show loader
+                const originalText = captureBtn.innerHTML;
+                captureBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Capturing...';
+                captureBtn.disabled = true;
 
                 if (!navigator.geolocation) {
                     alert('Geolocation not supported');
@@ -235,6 +278,15 @@
                                     timer: 1500,
                                     showConfirmButton: false
                                 }).then(() => location.reload());
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                alert('An error occurred');
+                            })
+                            .finally(() => {
+                                // Reset button
+                                captureBtn.innerHTML = originalText;
+                                captureBtn.disabled = false;
                             });
 
                     }, 'image/jpeg');
@@ -247,6 +299,30 @@
             /* --------------------------
                STOP CAMERA
             ---------------------------*/
+            // Handle show details button click
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('show-details')) {
+                    var attendanceId = e.target.getAttribute('data-id');
+                    fetch(`/attendance/show/${attendanceId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('userName').textContent = data.user.name;
+                            document.getElementById('userEmail').textContent = data.user.email;
+                            document.getElementById('userPhone').textContent = data.user.phone || 'N/A';
+                            document.getElementById('attendanceDate').textContent = data.date;
+                            document.getElementById('checkInTime').textContent = data.check_in_time ? new Date(data.check_in_time).toLocaleString() : 'N/A';
+                            document.getElementById('checkOutTime').textContent = data.check_out_time ? new Date(data.check_out_time).toLocaleString() : 'N/A';
+                            document.getElementById('checkInSelfie').setAttribute('src', data.check_in_selfie ? '/' + data.check_in_selfie : '');
+                            document.getElementById('checkOutSelfie').setAttribute('src', data.check_out_selfie ? '/' + data.check_out_selfie : '');
+                            new bootstrap.Modal(document.getElementById('attendanceDetailsModal')).show();
+                        })
+                        .catch(error => {
+                            console.error('Error fetching attendance details:', error);
+                            alert('Error fetching attendance details.');
+                        });
+                }
+            });
+
             modalElement.addEventListener('hidden.bs.modal', stopCamera);
 
             function stopCamera() {

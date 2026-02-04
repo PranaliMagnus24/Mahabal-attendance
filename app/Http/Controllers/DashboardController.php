@@ -15,9 +15,7 @@ class DashboardController extends Controller
 
         if ($request->ajax()) {
 
-            $query = ($authRole === 'admin')
-                ? User::query()
-                : User::where('role', 'user');
+            $query = User::where('role', '!=', 'admin');
 
             if ($request->search_value) {
                 $query->where(function ($q) use ($request) {

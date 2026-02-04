@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/dashboard/destroy/{id}', [DashboardController::class, 'destroy'])->name('employees.destroy');
         Route::get('/attendance/list', [AttendanceController::class, 'list'])
             ->name('attendance.list');
+
     });
 
     // Attendance page (User only)
@@ -43,6 +44,9 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/check-out', [AttendanceController::class, 'checkOut'])
         ->name('attendance.checkOut');
+
+    Route::get('/attendance/export', [AttendanceController::class, 'export'])
+            ->name('attendance.export');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

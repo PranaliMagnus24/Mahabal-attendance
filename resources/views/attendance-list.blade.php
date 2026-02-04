@@ -8,25 +8,40 @@
     @endsection
     <div class="container mt-5">
         <div class="card shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Attendance List</h4>
-                <div class="d-flex gap-3 align-items-end flex-wrap">
+            <div class="card-header d-flex flex-column gap-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Attendance List</h4>
+                    <div class="d-flex gap-2">
+                        <!-- Export button -->
+                        <button id="exportExcel" class="btn btn-success d-none d-sm-inline-block" data-bs-toggle="tooltip"
+                            data-bs-placement="top" title="Export Excel">
+                            <i class="bi bi-save"></i>
+                        </button>
+
+                        <!-- Reset button for desktop - moved to top right -->
+                        <a href="{{ route('attendance.list') }}"
+                            class="btn btn-secondary d-none d-sm-inline-block">Reset</a>
+                    </div>
+                </div>
+
+                <!-- Filters container with responsive layout -->
+                <div class="d-flex flex-wrap gap-3 align-items-end">
                     <!-- Start Date -->
-                    <div class="d-flex flex-column">
+                    <div class="d-flex flex-column flex-1 min-w-[150px]">
                         <input type="date" id="startDate" class="form-control">
                         <label for="startDate" class="form-text text-muted text-center">
                             Start Date
                         </label>
                     </div>
                     <!-- End Date -->
-                    <div class="d-flex flex-column">
+                    <div class="d-flex flex-column flex-1 min-w-[150px]">
                         <input type="date" id="endDate" class="form-control">
                         <label for="endDate" class="form-text text-muted text-center">
                             End Date
                         </label>
                     </div>
                     <!-- User Filter -->
-                    <div class="d-flex flex-column">
+                    <div class="d-flex flex-column flex-1 min-w-[150px]">
                         <select id="filterUser" class="form-select">
                             <option value="">Select User</option>
                             @foreach ($users as $user)
@@ -37,11 +52,13 @@
                             User
                         </label>
                     </div>
-                    <!-- Reset -->
-                    <div class="mb-4">
-                        <a href="{{ route('attendance.list') }}" class="btn btn-secondary">Reset</a>
+                    <!-- Export and Reset buttons for mobile - full width -->
+                    <div class="d-flex flex-column flex-1 min-w-[150px]">
+                        <button id="exportExcelMobile" class="btn btn-success w-100 d-sm-none mb-2">
+                            <i class="bi bi-save"></i>
+                        </button>
+                        <a href="{{ route('attendance.list') }}" class="btn btn-secondary w-100 d-sm-none">Reset</a>
                     </div>
-
                 </div>
 
             </div>
@@ -177,6 +194,93 @@
                         },
                         error: function () {
                             alert('Error fetching attendance details.');
+                        }
+                    });
+                });
+
+                // Export to Excel function
+                function exportToExcel(data, filename = 'attendance-list') {
+                    // Create worksheet data
+                    const worksheetData = [];
+
+                    // Add header row
+                    worksheetData.push(['Date', 'User Name', 'Check In', 'Check Out']);
+
+                    // Add data rows
+                    data.forEach(row => {
+                        worksheetData.push([
+                            row.date,
+                            row.user_name,
+                            row.check_in,
+                            row.check_out
+                        ]);
+                    });
+
+                    // Create CSV content
+                    const csvContent = worksheetData.map(row =>
+                        row.map(cell => `"${cell}"`).join(',')
+                    ).join('\n');
+
+                    // Create and download file
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', `${filename}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+
+                // Export button click event (desktop and mobile)
+                $('#exportExcel, #exportExcelMobile').on('click', function () {
+                    // Show loading indicator
+                    $(this).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...');
+                    $(this).prop('disabled', true);
+
+                    // Get filter parameters
+                    const params = {
+                        start_date: $('#startDate').val(),
+                        end_date: $('#endDate').val(),
+                        user_id: $('#filterUser').val()
+                    };
+
+                    // Fetch data for export
+                    $.ajax({
+                        url: '{{ route("attendance.export") }}',
+                        type: 'GET',
+                        data: params,
+                        success: function (response) {
+                            if (response.data.length > 0) {
+                                // Generate filename with date range if applicable
+                                let filename = 'attendance-list';
+                                if (params.start_date && params.end_date) {
+                                    filename = `attendance-${params.start_date}_to_${params.end_date}`;
+                                } else if (params.start_date) {
+                                    filename = `attendance-from-${params.start_date}`;
+                                } else if (params.end_date) {
+                                    filename = `attendance-to-${params.end_date}`;
+                                }
+
+                                // Export to Excel
+                                exportToExcel(response.data, filename);
+                            } else {
+                                alert('No data to export');
+                            }
+
+                            // Reset both buttons
+                            $('#exportExcel').html('<i class="bi bi-save"></i>');
+                            $('#exportExcel').prop('disabled', false);
+                            $('#exportExcelMobile').html('<i class="bi bi-file-earmark-excel"></i> <i class="bi bi-save"></i>');
+                            $('#exportExcelMobile').prop('disabled', false);
+                        },
+                        error: function () {
+                            alert('Error exporting data');
+                            // Reset both buttons
+                            $('#exportExcel').html('<i class="bi bi-save"></i>');
+                            $('#exportExcel').prop('disabled', false);
+                            $('#exportExcelMobile').html('<i class="bi bi-file-earmark-excel"></i> <i class="bi bi-save"></i>');
+                            $('#exportExcelMobile').prop('disabled', false);
                         }
                     });
                 });

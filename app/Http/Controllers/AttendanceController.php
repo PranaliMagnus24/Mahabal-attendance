@@ -15,6 +15,9 @@ class AttendanceController extends Controller
         if ($request->ajax()) {
 
             $query = Attendance::with('user')
+                ->whereHas('user', function ($q) {
+                    $q->whereNull('deleted_at');
+                })
                 ->latest('date');
 
             // Filter by USER
@@ -34,7 +37,7 @@ class AttendanceController extends Controller
             return DataTables::of($query)
                 ->addColumn('checkbox', fn ($row) => '<input type="checkbox" value="'.$row->id.'">'
                 )
-                ->addColumn('user_name', fn ($row) => $row->user->name)
+                ->addColumn('user_name', fn ($row) => $row->user ? $row->user->name : 'Deleted User')
                 ->addColumn('check_in', fn ($row) => $row->check_in_time
                         ? Carbon::parse($row->check_in_time)
                             ->timezone('Asia/Kolkata')
@@ -57,8 +60,11 @@ class AttendanceController extends Controller
                 ->make(true);
         }
 
-        // Users for dropdown (role = user)
-        $users = User::where('role', 'user')->select('id', 'name')->get();
+        // Users for dropdown (roles = user or manager and not soft deleted)
+        $users = User::whereIn('role', ['user', 'manager'])
+            ->whereNull('deleted_at')
+            ->select('id', 'name')
+            ->get();
 
         return view('attendance-list', compact('users'));
     }
@@ -209,5 +215,51 @@ class AttendanceController extends Controller
         $attendance = Attendance::with('user', 'attendedBy')->findOrFail($id);
 
         return response()->json($attendance);
+    }
+
+    public function export(Request $request)
+    {
+        $query = Attendance::with('user')
+            ->whereHas('user', function ($q) {
+                $q->whereNull('deleted_at');
+            })
+            ->latest('date');
+
+        // Filter by USER
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        // Filter by DATE RANGE
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('date', '<=', $request->end_date);
+        }
+
+        $attendances = $query->get();
+
+        return response()->json([
+            'data' => $attendances->map(function ($attendance) {
+                return [
+                    'date' => Carbon::parse($attendance->date)
+                        ->timezone('Asia/Kolkata')
+                        ->format('d-m-Y'),
+                    'user_name' => $attendance->user ? $attendance->user->name : 'Deleted User',
+                    'check_in' => $attendance->check_in_time
+                        ? Carbon::parse($attendance->check_in_time)
+                            ->timezone('Asia/Kolkata')
+                            ->format('h:i A')
+                        : '-',
+                    'check_out' => $attendance->check_out_time
+                        ? Carbon::parse($attendance->check_out_time)
+                            ->timezone('Asia/Kolkata')
+                            ->format('h:i A')
+                        : '-',
+                ];
+            }),
+        ]);
     }
 }

@@ -16,6 +16,9 @@ class DashboardController extends Controller
         if ($request->ajax()) {
 
             $query = User::where('role', '!=', 'admin');
+            if ($authRole === 'manager') {
+                $query->where('status', 'active');
+                }
 
             if ($request->search_value) {
                 $query->where(function ($q) use ($request) {
@@ -31,6 +34,13 @@ class DashboardController extends Controller
             return DataTables::of($query)
                 ->addColumn('checkbox', fn ($row) => '<input type="checkbox" value="'.$row->id.'">'
                 )
+                ->addColumn('status', function ($row) {
+                    if ($row->status === 'active') {
+                        return '<span class="badge bg-success">Active</span>';
+                        }
+                        return '<span class="badge bg-danger">Inactive</span>';
+                        })
+
 
                 ->addColumn('role', fn ($row) => ucfirst($row->role)
                 )
@@ -41,6 +51,9 @@ class DashboardController extends Controller
                         return '
                         <button class="btn btn-sm btn-primary edit-btn" data-id="'.$row->id.'">Edit</button>
                         <button class="btn btn-sm btn-danger delete-btn" data-id="'.$row->id.'">Delete</button>
+                        <button class="btn btn-sm btn-warning change-password-btn" data-id="'.$row->id.'">
+                         Change Password
+                        </button>
                     ';
                     }
 
@@ -61,14 +74,13 @@ class DashboardController extends Controller
                                 data-user="'.$row->id.'" data-action="check-out">Check Out</button>';
                         }
 
-                        // If check out is completed, show check in button again for next cycle
                         return '<button class="btn btn-sm btn-success attendance-btn"
                             data-user="'.$row->id.'" data-action="check-in">Check In</button>';
                     }
 
                     return '-';
                 })
-                ->rawColumns(['checkbox', 'action'])
+                ->rawColumns(['checkbox', 'action','status'])
                 ->make(true);
         }
 
@@ -126,5 +138,21 @@ class DashboardController extends Controller
         $user = User::findOrFail($id);
 
         return response()->json($user);
+    }
+
+    ///Admin can change password of any user
+    public function changePassword(Request $request, $id)
+    {
+        $request->validate([
+            'password' => 'required|min:8',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return response()->json([
+            'success' => 'Password changed successfully',
+        ]);
     }
 }

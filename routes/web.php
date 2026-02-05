@@ -25,6 +25,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/dashboard/destroy/{id}', [DashboardController::class, 'destroy'])->name('employees.destroy');
         Route::get('/attendance/list', [AttendanceController::class, 'list'])
             ->name('attendance.list');
+        Route::post('/users/change-password/{id}', [DashboardController::class, 'changePassword'])->middleware('auth');
+
 
     });
 

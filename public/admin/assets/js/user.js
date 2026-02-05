@@ -9,7 +9,11 @@ $(document).ready(function () {
     let columns = [
         { data: 'checkbox', orderable: false, searchable: false },
         { data: 'name' },
-        { data: 'phone' }
+        { data: 'phone' },
+        {
+            data: 'status',
+            visible: authRole === 'admin'
+        },
     ];
     if (isAdmin) {
         columns.push({ data: 'role' });
@@ -17,7 +21,7 @@ $(document).ready(function () {
 
     columns.push({ data: 'action', orderable: false, searchable: false });
 
-    $('.employeeList').DataTable({
+    let table = $('.employeeList').DataTable({
         processing: true,
         serverSide: true,
         responsive: true,
@@ -80,10 +84,22 @@ $(document).ready(function () {
             success: function (response) {
                 $('#editEmployeeModal').modal('hide');
                 table.ajax.reload();
-                toastr.success(response.success);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.success,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             },
             error: function (xhr) {
-                toastr.error('Error updating employee.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error updating employee.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             }
         });
     });
@@ -107,12 +123,55 @@ $(document).ready(function () {
             success: function (response) {
                 $('#deleteConfirmationModal').modal('hide');
                 table.ajax.reload();
-                toastr.success(response.success);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.success,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             },
             error: function (xhr) {
-                alert('Error deleting employee.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error deleting employee.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             }
         });
     });
 
+});
+$(document).on('click', '.change-password-btn', function () {
+    let userId = $(this).data('id');
+    $('#password_user_id').val(userId);
+    $('#new_password').val('');
+    $('#confirm_password').val('');
+    $('#changePasswordModal').modal('show');
+});
+
+$('#savePasswordBtn').click(function () {
+    let userId = $('#password_user_id').val();
+    let password = $('#new_password').val();
+    let confirm = $('#confirm_password').val();
+
+    if (password !== confirm) {
+        alert('Passwords do not match');
+        return;
+    }
+
+    $.ajax({
+        url: `/users/change-password/${userId}`,
+        type: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            password: password
+        },
+        success: function (res) {
+            $('#changePasswordModal').modal('hide');
+            alert(res.success);
+        }
+    });
 });

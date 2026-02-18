@@ -59,6 +59,7 @@ $(document).ready(function () {
                 $('#editName').val(data.name);
                 $('#editPhone').val(data.phone);
                 $('#editStatus').val(data.status);
+                $('#editWeeklyOff').val(data.weekly_off);
                 $('#editEmployeeForm').attr('action', '/dashboard/update/' + employeeId);
                 $('#editEmployeeModal').modal('show');
             })

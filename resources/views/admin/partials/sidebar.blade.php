@@ -24,6 +24,14 @@
                 </a>
             </li>
         @endif
+        @if(auth()->check() && auth()->user()->role === 'admin')
+         <li class="nav-item">
+            <a class="nav-link" href="{{ route('general-setting.index') }}">
+                <i class="bi bi-gear"></i>
+                <span>General Setting</span>
+            </a>
+        </li>
+        @endif
         <li class="nav-item">
             <form method="POST" action="{{ route('logout') }}" id="logoutForm">
                 @csrf

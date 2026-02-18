@@ -116,12 +116,12 @@
                             <h6>Selfies</h6>
                             <div class="mb-3">
                                 <strong>Check In Selfie:</strong><br>
-                                <img id="checkInSelfie" src="" alt="Check In Selfie" class="img-fluid"
+                                <img id="checkInSelfie" src="" alt="" class="img-fluid"
                                     style="max-width: 200px;">
                             </div>
                             <div>
                                 <strong>Check Out Selfie:</strong><br>
-                                <img id="checkOutSelfie" src="" alt="Check Out Selfie" class="img-fluid"
+                                <img id="checkOutSelfie" src="" alt="" class="img-fluid"
                                     style="max-width: 200px;">
                             </div>
                         </div>

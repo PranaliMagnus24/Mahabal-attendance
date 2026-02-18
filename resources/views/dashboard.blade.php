@@ -46,7 +46,7 @@
                             <th>Employee Name</th>
                             <th>Phone</th>
                             @if(auth()->user()->role === 'admin')
-                            <th>Status</th>
+                                <th>Status</th>
                             @endif
                             @if(auth()->user()->role === 'admin')
                                 <th>Role</th>
@@ -131,6 +131,23 @@
                     <!-- Role -->
                     <input type="hidden" name="role" value="user">
 
+                    <!-- Weekly Off -->
+                    <div class="mb-3">
+                        <label class="form-label">Weekly Off</label>
+                        <select name="weekly_off" class="form-select">
+                            <option value="sunday">Sunday</option>
+                            <option value="monday">Monday</option>
+                            <option value="tuesday">Tuesday</option>
+                            <option value="wednesday">Wednesday</option>
+                            <option value="thursday">Thursday</option>
+                            <option value="friday">Friday</option>
+                            <option value="saturday">Saturday</option>
+                        </select>
+                        @error('weekly_off')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
+                    </div>
+
                     <!-- Status -->
                     <div class="mb-3">
                         <label class="form-label">Status</label>
@@ -189,6 +206,20 @@
                             inputmode="numeric">
                     </div>
 
+                    <!-- Weekly Off -->
+                    <div class="mb-3">
+                        <label class="form-label">Weekly Off</label>
+                        <select name="weekly_off" id="editWeeklyOff" class="form-select">
+                            <option value="sunday">Sunday</option>
+                            <option value="monday">Monday</option>
+                            <option value="tuesday">Tuesday</option>
+                            <option value="wednesday">Wednesday</option>
+                            <option value="thursday">Thursday</option>
+                            <option value="friday">Friday</option>
+                            <option value="saturday">Saturday</option>
+                        </select>
+                    </div>
+
                     <!-- Status -->
                     <div class="mb-3">
                         <label class="form-label">Status</label>
@@ -198,7 +229,6 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Employee</button>
@@ -281,86 +311,20 @@
         const userId = target.dataset.user || null;
         const action = target.dataset.action;
 
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const modalEl = document.getElementById('cameraModal');
-        const modal = new bootstrap.Modal(modalEl);
-
-        let stream = null;
-
-        modal.show();
-
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(s => {
-                stream = s;
-                video.srcObject = stream;
-            })
-            .catch(() => {
-                modal.hide();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Camera Required',
-                    text: 'Camera access is required for attendance',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            });
-
-        document.getElementById('captureBtn').onclick = function () {
-            const captureBtn = this;
-            const captureBtnText = document.getElementById('captureBtnText');
-            const captureBtnLoader = document.getElementById('captureBtnLoader');
-
-            if (!stream || captureBtn.disabled) return;
-
-            // Show loader and disable button
-            captureBtn.disabled = true;
-            captureBtnText.textContent = 'Processing...';
-            captureBtnLoader.classList.remove('d-none');
-
-            navigator.geolocation.getCurrentPosition(async position => {
-
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-
-                let address = 'Location not found';
-                try {
-                    const res = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-                    );
-                    const data = await res.json();
-                    address = data.display_name || address;
-                } catch { }
-
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                ctx.fillStyle = "rgba(0,0,0,0.6)";
-                ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
-
-                ctx.fillStyle = "#fff";
-                ctx.font = "14px Arial";
-
-                const now = new Date().toLocaleString('en-IN', {
-                    timeZone: 'Asia/Kolkata'
-                });
-
-                ctx.fillText(`Date & Time: ${now}`, 10, canvas.height - 55);
-                ctx.fillText(`Location: ${address}`, 10, canvas.height - 25);
-
-                canvas.toBlob(blob => {
-
+        // For admin, skip camera modal and directly send request
+        if (authRole === 'admin') {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: `Do you want to ${action} for this user?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
                     const formData = new FormData();
-                    formData.append('selfie', blob, 'selfie.jpg');
-
                     if (userId) {
                         formData.append('user_id', userId);
-                    }
-
-                    // Log FormData contents for debugging
-                    console.log('FormData contents:');
-                    for (let [key, value] of formData.entries()) {
-                        console.log(key, value);
                     }
 
                     const url = action === 'check-in'
@@ -396,9 +360,6 @@
                             }
                         })
                         .then(data => {
-                            modal.hide();
-                            if (stream) stream.getTracks().forEach(t => t.stop());
-
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Success',
@@ -409,9 +370,6 @@
                         })
                         .catch(err => {
                             console.error('ERROR:', err.message);
-                            modal.hide();
-                            if (stream) stream.getTracks().forEach(t => t.stop());
-
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',
@@ -419,34 +377,178 @@
                                 timer: 2000,
                                 showConfirmButton: false
                             });
-                        })
-                        .finally(() => {
-                            // Hide loader and re-enable button
-                            captureBtn.disabled = false;
-                            captureBtnText.textContent = 'Capture';
-                            captureBtnLoader.classList.add('d-none');
                         });
+                }
+            });
+        } else {
+            // For manager and user, show camera modal
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const modalEl = document.getElementById('cameraModal');
+            const modal = new bootstrap.Modal(modalEl);
 
-                }, 'image/jpeg');
+            let stream = null;
 
-            }, () => {
-                modal.hide();
-                if (stream) stream.getTracks().forEach(t => t.stop());
+            modal.show();
 
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Location Required',
-                    text: 'Geolocation is required for attendance',
-                    timer: 2000,
-                    showConfirmButton: false
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(s => {
+                    stream = s;
+                    video.srcObject = stream;
+                })
+                .catch(() => {
+                    modal.hide();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Camera Required',
+                        text: 'Camera access is required for attendance',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
                 });
 
-                // Hide loader and re-enable button
-                captureBtn.disabled = false;
-                captureBtnText.textContent = 'Capture';
-                captureBtnLoader.classList.add('d-none');
-            });
-        };
+            document.getElementById('captureBtn').onclick = function () {
+                const captureBtn = this;
+                const captureBtnText = document.getElementById('captureBtnText');
+                const captureBtnLoader = document.getElementById('captureBtnLoader');
+
+                if (!stream || captureBtn.disabled) return;
+
+                // Show loader and disable button
+                captureBtn.disabled = true;
+                captureBtnText.textContent = 'Processing...';
+                captureBtnLoader.classList.remove('d-none');
+
+                navigator.geolocation.getCurrentPosition(async position => {
+
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    let address = 'Location not found';
+                    try {
+                        const res = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+                        );
+                        const data = await res.json();
+                        address = data.display_name || address;
+                    } catch { }
+
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    ctx.fillStyle = "rgba(0,0,0,0.6)";
+                    ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
+
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "14px Arial";
+
+                    const now = new Date().toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata'
+                    });
+
+                    ctx.fillText(`Date & Time: ${now}`, 10, canvas.height - 55);
+                    ctx.fillText(`Location: ${address}`, 10, canvas.height - 25);
+
+                    canvas.toBlob(blob => {
+
+                        const formData = new FormData();
+                        formData.append('selfie', blob, 'selfie.jpg');
+
+                        if (userId) {
+                            formData.append('user_id', userId);
+                        }
+
+                        // Log FormData contents for debugging
+                        console.log('FormData contents:');
+                        for (let [key, value] of formData.entries()) {
+                            console.log(key, value);
+                        }
+
+                        const url = action === 'check-in'
+                            ? "{{ route('attendance.checkIn') }}"
+                            : "{{ route('attendance.checkOut') }}";
+
+                        fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document
+                                    .querySelector('meta[name="csrf-token"]')
+                                    .getAttribute('content')
+                            },
+                            body: formData
+                        })
+                            .then(async response => {
+                                const text = await response.text();
+                                console.log('STATUS:', response.status);
+                                console.log('RESPONSE:', text);
+
+                                if (!response.ok) {
+                                    try {
+                                        const errorData = JSON.parse(text);
+                                        throw new Error(errorData.message || 'Attendance failed');
+                                    } catch (e) {
+                                        throw new Error(text || 'Attendance failed');
+                                    }
+                                }
+                                try {
+                                    return JSON.parse(text);
+                                } catch (e) {
+                                    throw new Error('Invalid response format');
+                                }
+                            })
+                            .then(data => {
+                                modal.hide();
+                                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => location.reload());
+                            })
+                            .catch(err => {
+                                console.error('ERROR:', err.message);
+                                modal.hide();
+                                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Attendance failed. Check console.',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                            })
+                            .finally(() => {
+                                // Hide loader and re-enable button
+                                captureBtn.disabled = false;
+                                captureBtnText.textContent = 'Capture';
+                                captureBtnLoader.classList.add('d-none');
+                            });
+
+                    }, 'image/jpeg');
+
+                }, () => {
+                    modal.hide();
+                    if (stream) stream.getTracks().forEach(t => t.stop());
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Location Required',
+                        text: 'Geolocation is required for attendance',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+
+                    // Hide loader and re-enable button
+                    captureBtn.disabled = false;
+                    captureBtnText.textContent = 'Capture';
+                    captureBtnLoader.classList.add('d-none');
+                });
+            };
+        }
     });
 </script>
 <script>

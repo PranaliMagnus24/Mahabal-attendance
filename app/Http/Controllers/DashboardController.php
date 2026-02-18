@@ -18,7 +18,7 @@ class DashboardController extends Controller
             $query = User::where('role', '!=', 'admin');
             if ($authRole === 'manager') {
                 $query->where('status', 'active');
-                }
+            }
 
             if ($request->search_value) {
                 $query->where(function ($q) use ($request) {
@@ -37,22 +37,53 @@ class DashboardController extends Controller
                 ->addColumn('status', function ($row) {
                     if ($row->status === 'active') {
                         return '<span class="badge bg-success">Active</span>';
-                        }
-                        return '<span class="badge bg-danger">Inactive</span>';
-                        })
+                    }
 
+                    return '<span class="badge bg-danger">Inactive</span>';
+                })
 
                 ->addColumn('role', fn ($row) => ucfirst($row->role)
                 )
-
                 ->addColumn('action', function ($row) use ($authRole) {
 
                     if ($authRole === 'admin') {
-                        return '
-                        <button class="btn btn-sm btn-primary edit-btn" data-id="'.$row->id.'">Edit</button>
-                        <button class="btn btn-sm btn-danger delete-btn" data-id="'.$row->id.'">Delete</button>
-                        <button class="btn btn-sm btn-warning change-password-btn" data-id="'.$row->id.'">
-                         Change Password
+                        // For admin, add attendance buttons along with other actions
+                        $today = now()->toDateString();
+                        $attendance = \App\Models\Attendance::where('user_id', $row->id)
+                            ->where('date', $today)
+                            ->latest('id')
+                            ->first();
+
+                        $attendanceBtn = '';
+                        if (! $attendance || ! $attendance->check_in_time) {
+                            $attendanceBtn = '<button class="btn btn-sm btn-success attendance-btn"
+                                data-user="'.$row->id.'" data-action="check-in">Check In</button> ';
+                        } elseif ($attendance->check_in_time && ! $attendance->check_out_time) {
+                            $attendanceBtn = '<button class="btn btn-sm btn-warning attendance-btn"
+                                data-user="'.$row->id.'" data-action="check-out">Check Out</button> ';
+                        } else {
+                            $attendanceBtn = '<button class="btn btn-sm btn-success attendance-btn"
+                                data-user="'.$row->id.'" data-action="check-in">Check In</button> ';
+                        }
+
+                        return $attendanceBtn.'
+                        <button class="btn btn-sm btn-primary edit-btn"
+                            data-id="'.$row->id.'"
+                            data-bs-toggle="tooltip"
+                            title="Edit User">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-btn"
+                            data-id="'.$row->id.'"
+                            data-bs-toggle="tooltip"
+                            title="Delete User">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning change-password-btn"
+                            data-id="'.$row->id.'"
+                            data-bs-toggle="tooltip"
+                            title="Change Password">
+                            <i class="bi bi-lock"></i>
                         </button>
                     ';
                     }
@@ -80,7 +111,7 @@ class DashboardController extends Controller
 
                     return '-';
                 })
-                ->rawColumns(['checkbox', 'action','status'])
+                ->rawColumns(['checkbox', 'action', 'status'])
                 ->make(true);
         }
 
@@ -94,6 +125,7 @@ class DashboardController extends Controller
             'phone' => 'required|digits:10|unique:users,phone',
             'password' => 'required|min:8',
             'status' => 'required|in:active,inactive',
+            'weekly_off' => 'required|string'
         ]);
 
         User::create([
@@ -102,6 +134,7 @@ class DashboardController extends Controller
             'password' => Hash::make($request->password),
             'role' => 'user', // default
             'status' => $request->status,
+            'weekly_off' => $request->weekly_off
         ]);
 
         return redirect()->back()->with('success', 'Employee added successfully');
@@ -113,6 +146,7 @@ class DashboardController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|digits:10|unique:users,phone,'.$id,
             'status' => 'required|in:active,inactive',
+            'weekly_off' => 'required|string'
         ]);
 
         $user = User::findOrFail($id);
@@ -120,6 +154,7 @@ class DashboardController extends Controller
             'name' => $request->name,
             'phone' => $request->phone,
             'status' => $request->status,
+            'weekly_off' => $request->weekly_off
         ]);
 
         return response()->json(['success' => 'Employee updated successfully']);
@@ -140,7 +175,7 @@ class DashboardController extends Controller
         return response()->json($user);
     }
 
-    ///Admin can change password of any user
+    // /Admin can change password of any user
     public function changePassword(Request $request, $id)
     {
         $request->validate([

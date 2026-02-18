@@ -74,19 +74,26 @@ class AttendanceController extends Controller
         \Log::info('CheckIn Request Received');
         \Log::info('Request data: '.print_r($request->all(), true));
         try {
-            $request->validate([
-                'selfie' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-                'user_id' => 'nullable|exists:users,id',
-            ]);
-
-            // Logged-in user
             $authUser = auth()->user();
+
+            // Validate selfie only if not admin
+            $rules = [
+                'user_id' => 'nullable|exists:users,id',
+            ];
+            if ($authUser->role !== 'admin') {
+                $rules['selfie'] = 'required|image|mimes:jpeg,png,jpg|max:2048';
+            }
+
+            $request->validate($rules);
 
             // Determine target user
             $userId = $request->user_id ?? $authUser->id;
 
-            // Manager authorization
-            if ($request->user_id && $authUser->role !== 'manager') {
+            // Authorization:
+            // - Admin can check in any user
+            // - Manager can check in any user
+            // - User can only check in themselves
+            if ($request->user_id && ! in_array($authUser->role, ['admin', 'manager'])) {
                 return response()->json(['message' => 'Unauthorized.'], 403);
             }
 
@@ -146,15 +153,24 @@ class AttendanceController extends Controller
         \Log::info('CheckOut Request Received');
         \Log::info('Request data: '.print_r($request->all(), true));
         try {
-            $request->validate([
-                'selfie' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-            ]);
+            $authUser = auth()->user();
+
+            // Validate selfie only if not admin
+            $rules = [];
+            if ($authUser->role !== 'admin') {
+                $rules['selfie'] = 'required|image|mimes:jpeg,png,jpg|max:2048';
+            }
+
+            $request->validate($rules);
 
             // Determine which user to check out
             $userId = $request->user_id ? $request->user_id : auth()->id();
 
-            // If manager is trying to check out another user, verify role
-            if ($request->user_id && auth()->user()->role !== 'manager') {
+            // Authorization:
+            // - Admin can check out any user
+            // - Manager can check out any user
+            // - User can only check out themselves
+            if ($request->user_id && ! in_array($authUser->role, ['admin', 'manager'])) {
                 return response()->json(['message' => 'Unauthorized.'], 403);
             }
 

@@ -25,6 +25,7 @@ class User extends Authenticatable
         'role',
         'phone',
         'status',
+        'weekly_off',
         'created_by',
         'updated_by',
         'deleted_by',

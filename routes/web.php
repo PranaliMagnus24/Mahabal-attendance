@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\GeneralSettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -48,7 +49,12 @@ Route::middleware('auth')->group(function () {
         ->name('attendance.checkOut');
 
     Route::get('/attendance/export', [AttendanceController::class, 'export'])
-            ->name('attendance.export');
+        ->name('attendance.export');
+
+    ////General Setting
+    Route::get('/general-setting', [GeneralSettingController::class, 'index'])->name('general-setting.index');
+    Route::post('/general-setting/store', [GeneralSettingController::class, 'store'])->name('general-setting.store');
+
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

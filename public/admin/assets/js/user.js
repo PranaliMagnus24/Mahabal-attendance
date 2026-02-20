@@ -60,6 +60,8 @@ $(document).ready(function () {
                 $('#editPhone').val(data.phone);
                 $('#editStatus').val(data.status);
                 $('#editWeeklyOff').val(data.weekly_off);
+                $('#editPrice').val(data.price);
+                $('#editDuration').val(data.duration);
                 $('#editEmployeeForm').attr('action', '/dashboard/update/' + employeeId);
                 $('#editEmployeeModal').modal('show');
             })

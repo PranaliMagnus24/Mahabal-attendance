@@ -60,7 +60,6 @@ class AttendanceController extends Controller
                 ->make(true);
         }
 
-
         $users = User::whereIn('role', ['user', 'manager'])
             ->whereNull('deleted_at')
             ->select('id', 'name')
@@ -213,7 +212,7 @@ class AttendanceController extends Controller
         return view('attendance', compact('attendances'));
     }
 
-    //Show attendance modal
+    // Show attendance modal
     public function show($id)
     {
         $attendance = Attendance::with('user', 'attendedBy')->findOrFail($id);
@@ -221,7 +220,7 @@ class AttendanceController extends Controller
         return response()->json($attendance);
     }
 
-    //Export attendance
+    // Export attendance
     public function export(Request $request)
     {
         $query = Attendance::with('user')
@@ -268,7 +267,7 @@ class AttendanceController extends Controller
         ]);
     }
 
-    //Generate report
+    // Generate report
     public function generateReport(Request $request)
     {
         $request->validate([
@@ -304,7 +303,26 @@ class AttendanceController extends Controller
         $dailyRecords = [];
 
         foreach ($allDates as $date) {
-            if (isset($attendances[$date])) {
+            // Check if date is weekly off for the user
+            $dateDayOfWeek = Carbon::parse($date)->format('l'); // Get full day name (e.g., Monday)
+            $isWeeklyOff = false;
+
+            if (! empty($user->weekly_off)) {
+                // Assuming weekly_off is stored as full day name (e.g., "Sunday")
+                $userWeeklyOff = trim($user->weekly_off);
+                if (strtolower($dateDayOfWeek) === strtolower($userWeeklyOff)) {
+                    $isWeeklyOff = true;
+                }
+            }
+
+            if ($isWeeklyOff) {
+                $dailyRecords[] = [
+                    'date' => $date,
+                    'check_in' => '-',
+                    'check_out' => '-',
+                    'hours' => 'Weekly Off',
+                ];
+            } elseif (isset($attendances[$date])) {
                 $attendance = $attendances[$date];
                 $dailyRecords[] = [
                     'date' => $date,
@@ -328,6 +346,18 @@ class AttendanceController extends Controller
             }
         }
 
+        // Calculate weekly off days count
+        $weeklyOffDays = 0;
+        foreach ($allDates as $date) {
+            $dateDayOfWeek = Carbon::parse($date)->format('l');
+            if (! empty($user->weekly_off)) {
+                $userWeeklyOff = trim($user->weekly_off);
+                if (strtolower($dateDayOfWeek) === strtolower($userWeeklyOff)) {
+                    $weeklyOffDays++;
+                }
+            }
+        }
+
         // Convert total working hours from minutes to hours with decimal places
         $totalWorkingHours = round($totalWorkingHours / 60, 2);
 
@@ -346,6 +376,7 @@ class AttendanceController extends Controller
                 'total_days' => count($allDates),
                 'working_days' => $totalWorkingDays,
                 'absent_days' => count($absentDates),
+                'weekly_off_days' => $weeklyOffDays,
                 'total_working_hours' => $totalWorkingHours,
             ],
             'absent_dates' => array_map(function ($date) {

@@ -147,6 +147,22 @@
                             <span class="text-danger">{{ $message }}</span>
                         @enderror
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Price</label>
+                            <input type="text" name="price" class="form-control" value="{{ old('price') }}">
+                            @error('price')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label for="duration" class="form-label">Duration</label>
+                            <select name="duration" id="duration" class="form-select">
+                                <option value="hour">Hour</option>
+                                <option value="day">Day</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <!-- Status -->
                     <div class="mb-3">
@@ -218,6 +234,20 @@
                             <option value="friday">Friday</option>
                             <option value="saturday">Saturday</option>
                         </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Price</label>
+                            <input type="text" name="price" id="editPrice" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editDuration" class="form-label">Duration</label>
+                            <select name="duration" id="editDuration" class="form-select">
+                                <option value="hour">Hour</option>
+                                <option value="day">Day</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Status -->

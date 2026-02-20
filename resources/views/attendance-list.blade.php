@@ -160,7 +160,7 @@
 
                     <!-- Summary Cards -->
                     <div class="row g-3 mb-4">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card text-white">
                                 <div class="card-body">
                                     <h6 class="card-title">Total Days</h6>
@@ -168,7 +168,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card text-white">
                                 <div class="card-body">
                                     <h6 class="card-title">Working Days</h6>
@@ -176,11 +176,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card text-white">
                                 <div class="card-body">
                                     <h6 class="card-title">Absent Days</h6>
                                     <p class="card-text fs-3 text-dark" id="reportAbsentDays">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Weekly Off Days</h6>
+                                    <p class="card-text fs-3 text-dark" id="reportWeeklyOffDays">0</p>
                                 </div>
                             </div>
                         </div>
@@ -360,6 +368,7 @@
                             $('#reportTotalDays').text(response.summary.total_days);
                             $('#reportWorkingDays').text(response.summary.working_days);
                             $('#reportAbsentDays').text(response.summary.absent_days);
+                            $('#reportWeeklyOffDays').text(response.summary.weekly_off_days);
                             $('#reportTotalWorkingHours').text(response.summary.total_working_hours + ' hrs');
 
                             // Populate absent dates
@@ -376,9 +385,26 @@
                             response.daily_records.forEach(record => {
                                 const row = $('<tr>');
                                 row.append($('<td>').text(record.date));
-                                row.append($('<td>').text(record.check_in));
-                                row.append($('<td>').text(record.check_out));
-                                row.append($('<td>').text(record.hours));
+
+                                if (record.hours === 'Weekly Off') {
+                                    // Merge cells and show Weekly Off
+                                    const mergedCell = $('<td>')
+                                        .text('Weekly Off')
+                                        .attr('colspan', 3)
+                                        .css({
+                                            'text-align': 'center',
+                                            'background-color': '#fff3cd',
+                                            'font-weight': 'bold',
+                                            'color': '#856404'
+                                        });
+                                    row.append(mergedCell);
+                                } else {
+                                    // Normal cells
+                                    row.append($('<td>').text(record.check_in));
+                                    row.append($('<td>').text(record.check_out));
+                                    row.append($('<td>').text(record.hours));
+                                }
+
                                 dailyRecordsBody.append(row);
                             });
 

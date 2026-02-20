@@ -125,7 +125,9 @@ class DashboardController extends Controller
             'phone' => 'required|digits:10|unique:users,phone',
             'password' => 'required|min:8',
             'status' => 'required|in:active,inactive',
-            'weekly_off' => 'required|string'
+            'weekly_off' => 'required|string',
+            'price' => 'nullable|numeric',
+            'duration' => 'nullable'
         ]);
 
         User::create([
@@ -134,7 +136,9 @@ class DashboardController extends Controller
             'password' => Hash::make($request->password),
             'role' => 'user', // default
             'status' => $request->status,
-            'weekly_off' => $request->weekly_off
+            'weekly_off' => $request->weekly_off,
+            'price' => $request->price,
+            'duration' => $request->duration
         ]);
 
         return redirect()->back()->with('success', 'Employee added successfully');
@@ -146,7 +150,9 @@ class DashboardController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|digits:10|unique:users,phone,'.$id,
             'status' => 'required|in:active,inactive',
-            'weekly_off' => 'required|string'
+            'weekly_off' => 'required|string',
+            'price' => 'nullable|numeric',
+            'duration' => 'nullable'
         ]);
 
         $user = User::findOrFail($id);
@@ -154,7 +160,9 @@ class DashboardController extends Controller
             'name' => $request->name,
             'phone' => $request->phone,
             'status' => $request->status,
-            'weekly_off' => $request->weekly_off
+            'weekly_off' => $request->weekly_off,
+            'price' => $request->price,
+            'duration' => $request->duration
         ]);
 
         return response()->json(['success' => 'Employee updated successfully']);

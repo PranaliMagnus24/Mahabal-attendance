@@ -12,6 +12,12 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Attendance List</h4>
                     <div class="d-flex gap-2">
+                        <!-- Report button -->
+                        <button id="generateReport" class="btn btn-primary d-none d-sm-inline-block"
+                            data-bs-toggle="tooltip" data-bs-placement="top" title="Generate Report">
+                            <i class="bi bi-file-earmark-bar-graph"></i> Report
+                        </button>
+
                         <!-- Export button -->
                         <button id="exportExcel" class="btn btn-success d-none d-sm-inline-block" data-bs-toggle="tooltip"
                             data-bs-placement="top" title="Export Excel">
@@ -52,8 +58,11 @@
                             User
                         </label>
                     </div>
-                    <!-- Export and Reset buttons for mobile - full width -->
+                    <!-- Report, Export and Reset buttons for mobile - full width -->
                     <div class="d-flex flex-column flex-1 min-w-[150px]">
+                        <button id="generateReportMobile" class="btn btn-primary w-100 d-sm-none mb-2">
+                            <i class="bi bi-file-earmark-bar-graph"></i> Report
+                        </button>
                         <button id="exportExcelMobile" class="btn btn-success w-100 d-sm-none mb-2">
                             <i class="bi bi-save"></i>
                         </button>
@@ -116,14 +125,97 @@
                             <h6>Selfies</h6>
                             <div class="mb-3">
                                 <strong>Check In Selfie:</strong><br>
-                                <img id="checkInSelfie" src="" alt="" class="img-fluid"
-                                    style="max-width: 200px;">
+                                <img id="checkInSelfie" src="" alt="" class="img-fluid" style="max-width: 200px;">
                             </div>
                             <div>
                                 <strong>Check Out Selfie:</strong><br>
-                                <img id="checkOutSelfie" src="" alt="" class="img-fluid"
-                                    style="max-width: 200px;">
+                                <img id="checkOutSelfie" src="" alt="" class="img-fluid" style="max-width: 200px;">
                             </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Report Modal -->
+    <div class="modal fade" id="attendanceReportModal" tabindex="-1" aria-labelledby="attendanceReportModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="attendanceReportModalLabel">Attendance Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Report Header -->
+                    <div id="reportHeader" class="mb-4 p-3 bg-light rounded">
+                        <h6>Report Summary</h6>
+                        <p><strong>User:</strong> <span id="reportUserName"></span></p>
+                        <p><strong>Date Range:</strong> <span id="reportDateRange"></span></p>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Days</h6>
+                                    <p class="card-text fs-3 text-dark" id="reportTotalDays">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Working Days</h6>
+                                    <p class="card-text fs-3 text-dark" id="reportWorkingDays">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Absent Days</h6>
+                                    <p class="card-text fs-3 text-dark" id="reportAbsentDays">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Working Hours</h6>
+                                    <p class="card-text fs-3 text-dark" id="reportTotalWorkingHours">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Absent Dates -->
+                    {{-- <div id="absentDatesSection" class="mb-4">
+                        <h6>Absent Dates</h6>
+                        <p id="absentDatesList">-</p>
+                    </div> --}}
+
+                    <!-- Daily Records -->
+                    <div>
+                        <h6>Daily Attendance Records</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Check In</th>
+                                        <th>Check Out</th>
+                                        <th>Working Hours</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportDailyRecords">
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -231,6 +323,84 @@
                     link.click();
                     document.body.removeChild(link);
                 }
+
+                // Report button click event (desktop and mobile)
+                $('#generateReport, #generateReportMobile').on('click', function () {
+                    const userId = $('#filterUser').val();
+                    const startDate = $('#startDate').val();
+                    const endDate = $('#endDate').val();
+
+                    if (!userId) {
+                        alert('Please select a user');
+                        return;
+                    }
+
+                    if (!startDate || !endDate) {
+                        alert('Please select both start and end dates');
+                        return;
+                    }
+
+                    // Show loading indicator
+                    $(this).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating Report...');
+                    $(this).prop('disabled', true);
+
+                    // Fetch report data
+                    $.ajax({
+                        url: '{{ route("attendance.report") }}',
+                        type: 'GET',
+                        data: {
+                            user_id: userId,
+                            start_date: startDate,
+                            end_date: endDate
+                        },
+                        success: function (response) {
+                            // Populate report data
+                            $('#reportUserName').text(response.user.name);
+                            $('#reportDateRange').text(`${response.date_range.start} to ${response.date_range.end}`);
+                            $('#reportTotalDays').text(response.summary.total_days);
+                            $('#reportWorkingDays').text(response.summary.working_days);
+                            $('#reportAbsentDays').text(response.summary.absent_days);
+                            $('#reportTotalWorkingHours').text(response.summary.total_working_hours + ' hrs');
+
+                            // Populate absent dates
+                            if (response.absent_dates.length > 0) {
+                                $('#absentDatesList').html(response.absent_dates.join(', '));
+                            } else {
+                                $('#absentDatesList').text('No absent days');
+                            }
+
+                            // Populate daily records
+                            const dailyRecordsBody = $('#reportDailyRecords');
+                            dailyRecordsBody.empty();
+
+                            response.daily_records.forEach(record => {
+                                const row = $('<tr>');
+                                row.append($('<td>').text(record.date));
+                                row.append($('<td>').text(record.check_in));
+                                row.append($('<td>').text(record.check_out));
+                                row.append($('<td>').text(record.hours));
+                                dailyRecordsBody.append(row);
+                            });
+
+                            // Show the report modal
+                            $('#attendanceReportModal').modal('show');
+
+                            // Reset both buttons
+                            $('#generateReport').html('<i class="bi bi-file-earmark-bar-graph"></i> Report');
+                            $('#generateReport').prop('disabled', false);
+                            $('#generateReportMobile').html('<i class="bi bi-file-earmark-bar-graph"></i> Report');
+                            $('#generateReportMobile').prop('disabled', false);
+                        },
+                        error: function () {
+                            alert('Error generating report');
+                            // Reset both buttons
+                            $('#generateReport').html('<i class="bi bi-file-earmark-bar-graph"></i> Report');
+                            $('#generateReport').prop('disabled', false);
+                            $('#generateReportMobile').html('<i class="bi bi-file-earmark-bar-graph"></i> Report');
+                            $('#generateReportMobile').prop('disabled', false);
+                        }
+                    });
+                });
 
                 // Export button click event (desktop and mobile)
                 $('#exportExcel, #exportExcelMobile').on('click', function () {

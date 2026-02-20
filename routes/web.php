@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GeneralSettingController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,7 +28,6 @@ Route::middleware('auth')->group(function () {
             ->name('attendance.list');
         Route::post('/users/change-password/{id}', [DashboardController::class, 'changePassword'])->middleware('auth');
 
-
     });
 
     // Attendance page (User only)
@@ -51,10 +50,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendance/export', [AttendanceController::class, 'export'])
         ->name('attendance.export');
 
-    ////General Setting
+    Route::get('/attendance/report', [AttendanceController::class, 'generateReport'])
+        ->name('attendance.report');
+
+    // //General Setting
     Route::get('/general-setting', [GeneralSettingController::class, 'index'])->name('general-setting.index');
     Route::post('/general-setting/store', [GeneralSettingController::class, 'store'])->name('general-setting.store');
-
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

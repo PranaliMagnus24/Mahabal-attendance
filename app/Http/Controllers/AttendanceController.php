@@ -60,7 +60,7 @@ class AttendanceController extends Controller
                 ->make(true);
         }
 
-        // Users for dropdown (roles = user or manager and not soft deleted)
+
         $users = User::whereIn('role', ['user', 'manager'])
             ->whereNull('deleted_at')
             ->select('id', 'name')
@@ -88,24 +88,17 @@ class AttendanceController extends Controller
 
             // Determine target user
             $userId = $request->user_id ?? $authUser->id;
-
-            // Authorization:
-            // - Admin can check in any user
-            // - Manager can check in any user
-            // - User can only check in themselves
             if ($request->user_id && ! in_array($authUser->role, ['admin', 'manager'])) {
                 return response()->json(['message' => 'Unauthorized.'], 403);
             }
 
             $today = now()->toDateString();
 
-            // Get today's attendance
             $attendance = Attendance::where('user_id', $userId)
                 ->where('date', $today)
                 ->latest('id')
                 ->first();
 
-            // If already completed check-in and check-out, allow new check-in for next day (create new record)
             if ($attendance && $attendance->check_in_time && $attendance->check_out_time) {
                 $attendance = Attendance::create([
                     'user_id' => $userId,
@@ -113,7 +106,6 @@ class AttendanceController extends Controller
                     'attended_by' => $authUser->id,
                 ]);
             } elseif (! $attendance) {
-                // If record does not exist → create
                 $attendance = Attendance::create([
                     'user_id' => $userId,
                     'date' => $today,
@@ -165,11 +157,6 @@ class AttendanceController extends Controller
 
             // Determine which user to check out
             $userId = $request->user_id ? $request->user_id : auth()->id();
-
-            // Authorization:
-            // - Admin can check out any user
-            // - Manager can check out any user
-            // - User can only check out themselves
             if ($request->user_id && ! in_array($authUser->role, ['admin', 'manager'])) {
                 return response()->json(['message' => 'Unauthorized.'], 403);
             }
@@ -226,6 +213,7 @@ class AttendanceController extends Controller
         return view('attendance', compact('attendances'));
     }
 
+    //Show attendance modal
     public function show($id)
     {
         $attendance = Attendance::with('user', 'attendedBy')->findOrFail($id);
@@ -233,6 +221,7 @@ class AttendanceController extends Controller
         return response()->json($attendance);
     }
 
+    //Export attendance
     public function export(Request $request)
     {
         $query = Attendance::with('user')
@@ -277,5 +266,124 @@ class AttendanceController extends Controller
                 ];
             }),
         ]);
+    }
+
+    //Generate report
+    public function generateReport(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $userId = $request->user_id;
+        $startDate = Carbon::parse($request->start_date);
+        $endDate = Carbon::parse($request->end_date);
+
+        $user = User::find($userId);
+
+        // Get all dates in the range
+        $allDates = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $allDates[] = $currentDate->toDateString();
+            $currentDate->addDay();
+        }
+
+        // Get attendances for the user and date range
+        $attendances = Attendance::where('user_id', $userId)
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->get()
+            ->keyBy('date');
+
+        // Calculate report data
+        $totalWorkingDays = 0;
+        $totalWorkingHours = 0;
+        $absentDates = [];
+        $dailyRecords = [];
+
+        foreach ($allDates as $date) {
+            if (isset($attendances[$date])) {
+                $attendance = $attendances[$date];
+                $dailyRecords[] = [
+                    'date' => $date,
+                    'check_in' => $attendance->check_in_time ? Carbon::parse($attendance->check_in_time)->timezone('Asia/Kolkata')->format('h:i A') : '-',
+                    'check_out' => $attendance->check_out_time ? Carbon::parse($attendance->check_out_time)->timezone('Asia/Kolkata')->format('h:i A') : '-',
+                    'hours' => $this->calculateWorkingHours($attendance->check_in_time, $attendance->check_out_time),
+                ];
+
+                if ($attendance->check_in_time && $attendance->check_out_time) {
+                    $totalWorkingDays++;
+                    $totalWorkingHours += $this->calculateWorkingHoursInMinutes($attendance->check_in_time, $attendance->check_out_time);
+                }
+            } else {
+                $dailyRecords[] = [
+                    'date' => $date,
+                    'check_in' => '-',
+                    'check_out' => '-',
+                    'hours' => '-',
+                ];
+                $absentDates[] = $date;
+            }
+        }
+
+        // Convert total working hours from minutes to hours with decimal places
+        $totalWorkingHours = round($totalWorkingHours / 60, 2);
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+            ],
+            'date_range' => [
+                'start' => $startDate->format('d-m-Y'),
+                'end' => $endDate->format('d-m-Y'),
+            ],
+            'summary' => [
+                'total_days' => count($allDates),
+                'working_days' => $totalWorkingDays,
+                'absent_days' => count($absentDates),
+                'total_working_hours' => $totalWorkingHours,
+            ],
+            'absent_dates' => array_map(function ($date) {
+                return Carbon::parse($date)->format('d-m-Y');
+            }, $absentDates),
+            'daily_records' => array_map(function ($record) {
+                $record['date'] = Carbon::parse($record['date'])->format('d-m-Y');
+
+                return $record;
+            }, $dailyRecords),
+        ]);
+    }
+
+    // Calculate working hours
+    private function calculateWorkingHours($checkIn, $checkOut)
+    {
+        if (! $checkIn || ! $checkOut) {
+            return '-';
+        }
+
+        $checkInTime = Carbon::parse($checkIn);
+        $checkOutTime = Carbon::parse($checkOut);
+
+        $diff = $checkInTime->diff($checkOutTime);
+
+        return sprintf('%02d:%02d', $diff->h, $diff->i);
+    }
+
+    //  Calculate working hours in minutes
+    private function calculateWorkingHoursInMinutes($checkIn, $checkOut)
+    {
+        if (! $checkIn || ! $checkOut) {
+            return 0;
+        }
+
+        $checkInTime = Carbon::parse($checkIn);
+        $checkOutTime = Carbon::parse($checkOut);
+
+        return $checkInTime->diffInMinutes($checkOutTime);
     }
 }

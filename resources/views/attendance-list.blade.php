@@ -1,6 +1,6 @@
 @extends('admin.layouts.layout')
 
-@section('title', 'Mahabal Attendance')
+@section('title', 'Star Agro Attendance')
 @section('admin')
 @section('pagetitle', 'Attendance Management')
     @section('page-css')
@@ -90,6 +90,7 @@
                                 <th>User Name</th>
                                 <th>Check In</th>
                                 <th>Check Out</th>
+                                <th>Auto Checkout</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -200,6 +201,14 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-2">
+                            <div class="card text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Price</h6>
+                                    <p class="card-text fs-3 text-dark" id="reportTotalPrice">0</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Absent Dates -->
@@ -267,6 +276,7 @@
                         { data: 'user_name' },
                         { data: 'check_in' },
                         { data: 'check_out' },
+                        { data: 'auto_checkout', orderable: false, searchable: false },
                         { data: 'action', orderable: false, searchable: false }
                     ]
                 });
@@ -299,12 +309,12 @@
                 });
 
                 // Export to Excel function
-                function exportToExcel(data, filename = 'attendance-list') {
+                function exportToExcel(data, filename = 'attendance-list', totalPrice = 0) {
                     // Create worksheet data
                     const worksheetData = [];
 
                     // Add header row
-                    worksheetData.push(['Date', 'User Name', 'Check In', 'Check Out']);
+                    worksheetData.push(['Date', 'User Name', 'Check In', 'Check Out', 'Working Hours']);
 
                     // Add data rows
                     data.forEach(row => {
@@ -312,9 +322,15 @@
                             row.date,
                             row.user_name,
                             row.check_in,
-                            row.check_out
+                            row.check_out,
+                            row.working_hours || '-'
                         ]);
                     });
+
+                    // Add total price if available
+                    if (totalPrice > 0) {
+                        worksheetData.push(['', '', '', 'Total Price:', '₹' + totalPrice.toFixed(2)]);
+                    }
 
                     // Create CSV content
                     const csvContent = worksheetData.map(row =>
@@ -370,6 +386,7 @@
                             $('#reportAbsentDays').text(response.summary.absent_days);
                             $('#reportWeeklyOffDays').text(response.summary.weekly_off_days);
                             $('#reportTotalWorkingHours').text(response.summary.total_working_hours + ' hrs');
+                            $('#reportTotalPrice').text('₹' + response.summary.total_price.toFixed(2));
 
                             // Populate absent dates
                             if (response.absent_dates.length > 0) {
@@ -396,6 +413,18 @@
                                             'background-color': '#fff3cd',
                                             'font-weight': 'bold',
                                             'color': '#856404'
+                                        });
+                                    row.append(mergedCell);
+                                } else if (record.hours === 'Absent') {
+                                    // Merge cells and show Absent
+                                    const mergedCell = $('<td>')
+                                        .text('Absent')
+                                        .attr('colspan', 3)
+                                        .css({
+                                            'text-align': 'center',
+                                            //'background-color': '#f8d7da',
+                                            'font-weight': 'bold',
+                                            'color': '#721c24'
                                         });
                                     row.append(mergedCell);
                                 } else {
@@ -459,7 +488,7 @@
                                 }
 
                                 // Export to Excel
-                                exportToExcel(response.data, filename);
+                                exportToExcel(response.data, filename, response.total_price);
                             } else {
                                 alert('No data to export');
                             }

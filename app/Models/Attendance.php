@@ -14,6 +14,7 @@ class Attendance extends Model
         'check_out_time',
         'check_in_selfie',
         'check_out_selfie',
+        'auto_checkout',
     ];
 
     protected $casts = [

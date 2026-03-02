@@ -67,7 +67,9 @@ class AttendanceController extends Controller
             ->select('id', 'name')
             ->get();
 
-        return view('attendance-list', compact('users'));
+        $authRole = auth()->user()->role;
+
+        return view('attendance-list', compact('users', 'authRole'));
     }
 
     public function checkIn(Request $request)
@@ -523,6 +525,69 @@ class AttendanceController extends Controller
         }
 
         return sprintf('%02d:%02d', $diff->h, $diff->i);
+    }
+
+    // Manual attendance entry (Admin only)
+    public function manualAttendance(Request $request)
+    {
+        try {
+            $authUser = auth()->user();
+
+            if ($authUser->role !== 'admin') {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'date' => 'required|date',
+                'check_in_time' => 'nullable|date_format:H:i',
+                'check_out_time' => 'nullable|date_format:H:i',
+            ]);
+
+            $userId = $request->user_id;
+            $date = $request->date;
+
+            // Check if attendance record exists for this user and date
+            $attendance = Attendance::where('user_id', $userId)
+                ->where('date', $date)
+                ->latest('id')
+                ->first();
+
+            if (! $attendance) {
+                $attendance = Attendance::create([
+                    'user_id' => $userId,
+                    'date' => $date,
+                    'attended_by' => $authUser->id,
+                ]);
+            }
+
+            $updateData = [
+                'attended_by' => $authUser->id,
+            ];
+
+            if ($request->filled('check_in_time')) {
+                $checkInDateTime = Carbon::parse($date.' '.$request->check_in_time, 'Asia/Kolkata');
+                $updateData['check_in_time'] = $checkInDateTime->setTimezone('UTC');
+            }
+
+            if ($request->filled('check_out_time')) {
+                $checkOutDateTime = Carbon::parse($date.' '.$request->check_out_time, 'Asia/Kolkata');
+                $updateData['check_out_time'] = $checkOutDateTime->setTimezone('UTC');
+            }
+
+            $attendance->update($updateData);
+
+            return response()->json(['message' => 'Attendance marked successfully.']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Manual attendance validation error: '.print_r($e->errors(), true));
+
+            return response()->json(['message' => 'Validation failed: '.implode(', ', $e->errors()), 422]);
+        } catch (\Exception $e) {
+            \Log::error('Manual attendance error: '.$e->getMessage());
+            \Log::error('Stack trace: '.$e->getTraceAsString());
+
+            return response()->json(['message' => 'Something went wrong'], 500);
+        }
     }
 
     // Calculate working hours in minutes

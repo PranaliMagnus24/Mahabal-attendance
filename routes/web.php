@@ -53,6 +53,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendance/report', [AttendanceController::class, 'generateReport'])
         ->name('attendance.report');
 
+    // Manual attendance entry (Admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/attendance/manual', [AttendanceController::class, 'manualAttendance'])
+            ->name('attendance.manual');
+    });
+
     // //General Setting
     Route::get('/general-setting', [GeneralSettingController::class, 'index'])->name('general-setting.index');
     Route::post('/general-setting/store', [GeneralSettingController::class, 'store'])->name('general-setting.store');

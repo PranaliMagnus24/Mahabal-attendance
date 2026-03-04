@@ -1,6 +1,6 @@
 @extends('admin.layouts.layout')
 
-@section('title', 'Star Agro Attendance')
+@section('title', 'Mahabal Attendance')
 @section('admin')
 @section('pagetitle', 'Attendance Management')
     @section('page-css')
@@ -14,10 +14,10 @@
                     <div class="d-flex gap-2">
                         <!-- Manual Attendance button (Admin only) -->
                         @if($authRole === 'admin')
-                        <button id="manualAttendanceBtn" class="btn btn-warning d-none d-sm-inline-block"
-                            data-bs-toggle="tooltip" data-bs-placement="top" title="Manual Attendance">
-                            <i class="bi bi-pencil-square"></i> Manual Attendance
-                        </button>
+                            <button id="manualAttendanceBtn" class="btn btn-warning d-none d-sm-inline-block"
+                                data-bs-toggle="tooltip" data-bs-placement="top" title="Manual Attendance">
+                                <i class="bi bi-pencil-square"></i> Manual Attendance
+                            </button>
                         @endif
 
                         <!-- Report button -->
@@ -32,13 +32,13 @@
                             <i class="bi bi-save"></i>
                         </button>
 
-                        <!-- Reset button for desktop - moved to top right -->
+                        <!-- Reset button -->
                         <a href="{{ route('attendance.list') }}"
                             class="btn btn-secondary d-none d-sm-inline-block">Reset</a>
                     </div>
                 </div>
 
-                <!-- Filters container with responsive layout -->
+                <!-- Filters container -->
                 <div class="d-flex flex-wrap gap-3 align-items-end">
                     <!-- Start Date -->
                     <div class="d-flex flex-column flex-1 min-w-[150px]">
@@ -66,8 +66,13 @@
                             User
                         </label>
                     </div>
-                    <!-- Report, Export and Reset buttons for mobile - full width -->
+                    <!-- Report, Export and Reset buttons -->
                     <div class="d-flex flex-column flex-1 min-w-[150px]">
+                        @if($authRole === 'admin')
+                            <button id="manualAttendanceBtnMobile" class="btn btn-warning w-100 d-sm-none mb-2">
+                                <i class="bi bi-pencil-square"></i> Manual Attendance
+                            </button>
+                        @endif
                         <button id="generateReportMobile" class="btn btn-primary w-100 d-sm-none mb-2">
                             <i class="bi bi-file-earmark-bar-graph"></i> Report
                         </button>
@@ -186,6 +191,50 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                             <button type="submit" class="btn btn-primary">Save Attendance</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Attendance Modal -->
+    <div class="modal fade" id="editAttendanceModal" tabindex="-1" aria-labelledby="editAttendanceModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editAttendanceModalLabel">Edit Attendance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editAttendanceForm">
+                        @csrf
+                        @method('PUT')
+                        <div class="mb-3">
+                            <label for="editUserSelect" class="form-label">Select User</label>
+                            <select id="editUserSelect" name="user_id" class="form-select" required>
+                                <option value="">Select User</option>
+                                @foreach ($users as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDateInput" class="form-label">Select Date</label>
+                            <input type="date" id="editDateInput" name="date" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCheckInTime" class="form-label">Check In Time</label>
+                            <input type="time" id="editCheckInTime" name="check_in_time" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCheckOutTime" class="form-label">Check Out Time</label>
+                            <input type="time" id="editCheckOutTime" name="check_out_time" class="form-control">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Update Attendance</button>
                         </div>
                     </form>
                 </div>
@@ -508,8 +557,8 @@
                     });
                 });
 
-                // Manual attendance button click event
-                $('#manualAttendanceBtn').on('click', function () {
+                // Manual attendance button click event (desktop and mobile)
+                $('#manualAttendanceBtn, #manualAttendanceBtnMobile').on('click', function () {
                     $('#manualAttendanceForm')[0].reset();
                     $('#manualAttendanceModal').modal('show');
                 });
@@ -534,6 +583,90 @@
                             alert(errorMessage);
                         }
                     });
+                });
+
+                // Handle edit attendance button click
+                $(document).on('click', '.edit-attendance', function () {
+                    var attendanceId = $(this).data('id');
+                    $.ajax({
+                        url: '{{ route("attendance.edit", ":id") }}'.replace(':id', attendanceId),
+                        type: 'GET',
+                        success: function (data) {
+                            // Set attendance id in form
+                            $('#editAttendanceForm').data('id', attendanceId);
+                            // Set user
+                            $('#editUserSelect').val(data.user_id);
+                            // Set date
+                            const date = new Date(data.date);
+                            const dateString = date.toISOString().split('T')[0];
+                            $('#editDateInput').val(dateString);
+                            // Set check in time
+                            if (data.check_in_time) {
+                                const checkInTime = new Date(data.check_in_time);
+                                const checkInTimeString = checkInTime.toTimeString().slice(0, 5);
+                                $('#editCheckInTime').val(checkInTimeString);
+                            } else {
+                                $('#editCheckInTime').val('');
+                            }
+                            // Set check out time
+                            if (data.check_out_time) {
+                                const checkOutTime = new Date(data.check_out_time);
+                                const checkOutTimeString = checkOutTime.toTimeString().slice(0, 5);
+                                $('#editCheckOutTime').val(checkOutTimeString);
+                            } else {
+                                $('#editCheckOutTime').val('');
+                            }
+                            $('#editAttendanceModal').modal('show');
+                        },
+                        error: function () {
+                            alert('Error fetching attendance details for edit.');
+                        }
+                    });
+                });
+
+                // Edit attendance form submission
+                $('#editAttendanceForm').on('submit', function (e) {
+                    e.preventDefault();
+
+                    const attendanceId = $(this).data('id');
+                    const formData = $(this).serialize();
+
+                    $.ajax({
+                        url: '{{ route("attendance.update", ":id") }}'.replace(':id', attendanceId),
+                        type: 'PUT',
+                        data: formData,
+                        success: function (response) {
+                            alert(response.message);
+                            $('#editAttendanceModal').modal('hide');
+                            table.draw();
+                        },
+                        error: function (xhr) {
+                            const errorMessage = xhr.responseJSON?.message || 'Error updating attendance';
+                            alert(errorMessage);
+                        }
+                    });
+                });
+
+                // Handle delete attendance button click
+                $(document).on('click', '.delete-attendance', function () {
+                    var attendanceId = $(this).data('id');
+                    if (confirm('Are you sure you want to delete this attendance record?')) {
+                        $.ajax({
+                            url: '{{ route("attendance.delete", ":id") }}'.replace(':id', attendanceId),
+                            type: 'DELETE',
+                            data: {
+                                _token: '{{ csrf_token() }}'
+                            },
+                            success: function (response) {
+                                alert(response.message);
+                                table.draw();
+                            },
+                            error: function (xhr) {
+                                const errorMessage = xhr.responseJSON?.message || 'Error deleting attendance';
+                                alert(errorMessage);
+                            }
+                        });
+                    }
                 });
 
                 // Export button click event (desktop and mobile)

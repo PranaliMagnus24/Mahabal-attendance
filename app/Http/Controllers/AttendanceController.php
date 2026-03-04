@@ -56,8 +56,17 @@ class AttendanceController extends Controller
                     ->timezone('Asia/Kolkata')
                     ->format('d-m-Y')
                 )
-                ->addColumn('action', fn ($row) => '<button class="btn btn-primary btn-sm show-details" data-id="'.$row->id.'">View</button>'
-                )
+                ->addColumn('action', function ($row) {
+                    $authRole = auth()->user()->role;
+                    $buttons = '<button class="btn btn-primary btn-sm show-details" data-id="'.$row->id.'"><i class="bi bi-eye"></i></button>';
+
+                    if ($authRole === 'admin') {
+                        $buttons .= ' <button class="btn btn-warning btn-sm edit-attendance" data-id="'.$row->id.'"><i class="bi bi-pencil-square"></i></button>';
+                        $buttons .= ' <button class="btn btn-danger btn-sm delete-attendance" data-id="'.$row->id.'"><i class="bi bi-trash"></i></button>';
+                    }
+
+                    return $buttons;
+                })
                 ->rawColumns(['checkbox', 'action', 'auto_checkout'])
                 ->make(true);
         }
@@ -585,6 +594,94 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             \Log::error('Manual attendance error: '.$e->getMessage());
             \Log::error('Stack trace: '.$e->getTraceAsString());
+
+            return response()->json(['message' => 'Something went wrong'], 500);
+        }
+    }
+
+    // Edit attendance (Admin only)
+    public function edit(Request $request, $id)
+    {
+        try {
+            $authUser = auth()->user();
+
+            if ($authUser->role !== 'admin') {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+
+            $attendance = Attendance::findOrFail($id);
+
+            return response()->json($attendance);
+        } catch (\Exception $e) {
+            \Log::error('Edit attendance error: '.$e->getMessage());
+
+            return response()->json(['message' => 'Something went wrong'], 500);
+        }
+    }
+
+    // Update attendance (Admin only)
+    public function update(Request $request, $id)
+    {
+        try {
+            $authUser = auth()->user();
+
+            if ($authUser->role !== 'admin') {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'date' => 'required|date',
+                'check_in_time' => 'nullable|date_format:H:i',
+                'check_out_time' => 'nullable|date_format:H:i',
+            ]);
+
+            $attendance = Attendance::findOrFail($id);
+
+            $updateData = [
+                'user_id' => $request->user_id,
+                'date' => $request->date,
+                'attended_by' => $authUser->id,
+            ];
+
+            if ($request->filled('check_in_time')) {
+                $checkInDateTime = Carbon::parse($request->date.' '.$request->check_in_time, 'Asia/Kolkata');
+                $updateData['check_in_time'] = $checkInDateTime->setTimezone('UTC');
+            }
+
+            if ($request->filled('check_out_time')) {
+                $checkOutDateTime = Carbon::parse($request->date.' '.$request->check_out_time, 'Asia/Kolkata');
+                $updateData['check_out_time'] = $checkOutDateTime->setTimezone('UTC');
+            }
+
+            $attendance->update($updateData);
+
+            return response()->json(['message' => 'Attendance updated successfully.']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Update attendance validation error: '.print_r($e->errors(), true));
+            return response()->json(['message' => 'Validation failed: '.implode(', ', $e->errors()), 422]);
+        } catch (\Exception $e) {
+            \Log::error('Update attendance error: '.$e->getMessage());
+            return response()->json(['message' => 'Something went wrong'], 500);
+        }
+    }
+
+    // Delete attendance (Admin only)
+    public function destroy(Request $request, $id)
+    {
+        try {
+            $authUser = auth()->user();
+
+            if ($authUser->role !== 'admin') {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+
+            $attendance = Attendance::findOrFail($id);
+            $attendance->delete();
+
+            return response()->json(['message' => 'Attendance deleted successfully.']);
+        } catch (\Exception $e) {
+            \Log::error('Delete attendance error: '.$e->getMessage());
 
             return response()->json(['message' => 'Something went wrong'], 500);
         }

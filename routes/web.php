@@ -57,6 +57,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::post('/attendance/manual', [AttendanceController::class, 'manualAttendance'])
             ->name('attendance.manual');
+        Route::get('/attendance/edit/{id}', [AttendanceController::class, 'edit'])
+            ->name('attendance.edit');
+        Route::put('/attendance/update/{id}', [AttendanceController::class, 'update'])
+            ->name('attendance.update');
+        Route::delete('/attendance/delete/{id}', [AttendanceController::class, 'destroy'])
+            ->name('attendance.delete');
     });
 
     // //General Setting
